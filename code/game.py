@@ -6,9 +6,12 @@ from panda3d.core import DirectionalLight, AmbientLight
 from panda3d.physics import ForceNode, LinearVectorForce, PhysicsCollisionHandler
 #collision
 from panda3d.core import CollisionTraverser, BitMask32, CollisionBox, LPoint3f, CollisionNode
+#modelPool for cleanup
+from panda3d.core import ModelPool
 
 #our own code
-from code.playerMgr import playerManager
+from .playerMgr import playerManager
+from .entities.entModels import spinningModel
 
 class game_world(DirectObject):#I'll make this a direct object just incase I need it
     def __init__(self, lobby, worldFile = 'models/maps/terrain.egg'):
@@ -37,8 +40,10 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
 
         #Put world generation code calls here
         self.world = base.loader.load_model(worldFile)
-        self.world.reparent_to(base.render)
+        #self.world.reparent_to(base.render)
+        spinningModel(np = base.render)
         
+
         collisionNodes = self.world.find_all_matches('**/+CollisionNode')
         if collisionNodes.get_num_paths() <= 0:
             self.world.set_collide_mask(BitMask32(0b00001))
@@ -73,11 +78,16 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         self.ignoreAll()
         
         self.playerMgr.delete()
+        
         base.disableParticles()
         base.cTrav = None
+        
         del self.handler
         del self.lobby
+        
         self.world.remove_node()
+        ModelPool.garbage_collect()#Remove all models that are not still used.
+
         base.render.set_shader_off()
         base.render.clearLight()
         self.sunNp.remove_node()
