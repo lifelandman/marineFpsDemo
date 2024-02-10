@@ -1,0 +1,10 @@
+my-name plaer
+move-forward w
+move-backward s
+move-left arrow_left
+move-right arrow_right
+turn-left a
+turn-right d
+jump space
+dash shift
+pause escape

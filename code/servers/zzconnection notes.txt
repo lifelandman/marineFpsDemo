@@ -1,0 +1,4 @@
+Client connects to server.
+server sends "introduce" with connection id
+Client sends "connect" with connection id and name
+server sends "alias" with final name and id for client to internaly use.
