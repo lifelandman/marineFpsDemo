@@ -1,0 +1,10 @@
+Collision bitmasks are a usefull tool. before a collision is tested for, bitmasks are compared to see if at least one bit matches.
+
+here is a 'map' of the bitmasks for our project:
+
+0b00000
+  ||||^Bullet penetratable materials. (ex:wire fence) the from mask of bullet raycasting only tests for the world, so players should collide with this as well.
+  |||^blue team
+  ||^red team/all players (single player mode
+  |^Water. when a player hits, swim.
+  ^this bit represents that 'into' geometry is the world itself.
