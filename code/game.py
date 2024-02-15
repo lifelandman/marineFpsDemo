@@ -40,8 +40,7 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
 
         #Put world generation code calls here
         self.world = base.loader.load_model(worldFile)
-        #self.world.reparent_to(base.render)
-        spinningModel(np = base.render)
+        self.world.reparent_to(base.render)
         
 
         collisionNodes = self.world.find_all_matches('**/+CollisionNode')

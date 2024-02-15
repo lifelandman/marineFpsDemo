@@ -35,8 +35,8 @@ class modelInstanceEnt (npEnt):
     npOursOverrideable = True
     
     modelPath = 'box'
-    model = None
-    refCount = 0
+    model = None#We may have to put new model and refCount member variables for each derivative of this.
+    refCount = 0#it's only two lines, but it's annoying.
     
     def __init__(self, np, **kwargs):
         if np == None:
@@ -49,6 +49,7 @@ class modelInstanceEnt (npEnt):
         super().__init__(np = mnp, *kwargs)#Trick npEnt into holding the root of our model
         
     def destroy(self):
+        self.refCount -= 1
         if self.refCount <= 0:#
             self.refCount = 0
             self.model = None
