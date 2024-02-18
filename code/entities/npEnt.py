@@ -7,6 +7,7 @@ we create and destroy a pythonTag on that nodePath to maintain a link to our ent
 at the time of writing, this is in it's own file because it is reasonable to believe that this can be split down 'func' entities that enact an operation on a standard nodePath and model entities.
 '''
 
+from panda3d.core import NodePath
 from .entBase import entNamable
 
 class npEnt (entNamable):
@@ -15,15 +16,33 @@ class npEnt (entNamable):
     skipAccept = False#Do we even care about any nodepath we were given?
     
 
+<<<<<<< Updated upstream
     def __init__ (self, np = None, **kwargs):
+<<<<<<< Updated upstream
         super().__init__(**kwargs)
+=======
+        super().__init__(kwargs)
+=======
+    def __init__ (self, np: NodePath = None, **kwargs):
+        super().__init__(**kwargs)
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
         
         if (not self.skipAccept) and np != None:
             self.np = np
             self.npOurs = self.npOursOverrideable#Do we own the np or was it given to us
         else:
+<<<<<<< Updated upstream
             print(self.name)
             self.np = base.render.attach_new_node(self.name)
+=======
+<<<<<<< Updated upstream
+            self.np = base.render.attachNewNode(self.name)
+=======
+            print(self.name)
+            self.np = NodePath(self.name)
+>>>>>>> Stashed changes
+>>>>>>> Stashed changes
             self.npOurs = True#elaborating on above, if this isn't ours it must belong to level geometry or something like that.
             
         self.np.set_python_tag('entOwner', self)#NOTE!!! we cannot have multiple npEnts acting on one np!!!
