@@ -18,10 +18,11 @@ class modelEnt (npEnt):
     
     modelPath = 'box'
     
-    def __init__(self, np, **kwargs):
+    def __init__(self, np, pos = (0,0,0), **kwargs):
         mnp = loader.loadModel(self.modelPath)
         if np != None:
             mnp.reparent_to(np)#We hijack the np parameter and use it as our parent
+        mnp.set_pos(*pos)
         kwargs['np'] = mnp
         super().__init__(*kwargs)#Trick npEnt into holding the root of our model
         
@@ -38,13 +39,14 @@ class modelInstanceEnt (npEnt):
     model = None#We may have to put new model and refCount member variables for each derivative of this.
     refCount = 0#it's only two lines, but it's annoying.
     
-    def __init__(self, np, **kwargs):
+    def __init__(self, np, pos = (0,0,0), **kwargs):
         if np == None:
             return
         
         if self.model == None:#Load the model only when it's in use
             self.model = loader.loadModel(self.modelPath)
         mnp = self.model.instance_to(np)
+        mnp.set_pos(*pos)
         self.refCount += 1
         super().__init__(np = mnp, *kwargs)#Trick npEnt into holding the root of our model
         

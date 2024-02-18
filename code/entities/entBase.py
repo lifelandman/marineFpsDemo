@@ -38,7 +38,7 @@ class entBase(DirectObject):
         
 
 class entNamable(entBase):#since a lot of things would likely need a 'name' attribute, I'm defining this in this file as well.
-    def __init__(self, name = '', **kwargs):
+    def __init__(self, name: str = '', **kwargs):
         self.name = name
         super().__init__(*kwargs)#super gives us a handle to a parent class
         
