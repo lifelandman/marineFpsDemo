@@ -10,7 +10,7 @@ keybinds = [
     ConfigVariableString('turn-right', 'd'),
     
     ConfigVariableString('jump', 'space'),
-    ConfigVariableString('dash', 'shift'),
+    ConfigVariableString('crouch', 'shift'),
     
     ConfigVariableString('pause', 'escape'),
 

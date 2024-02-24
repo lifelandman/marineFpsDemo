@@ -1,7 +1,7 @@
 from direct.showbase.DirectObject import DirectObject
 
-class netPlayerTracker(DirectObject):
-    def __init__ (self):
+class netPlayerTracker(DirectObject):#TODO:: indecies are not used outside of a handfull of circumstances, usually by the host. this and lobby should be rewritten for better memory usage.
+    def __init__ (self):#ALTERNATIVELY:: Just rewrite this to be more legible/usefull. Ids can be used for shortening datagram strings sent over a network, after all.
         #actualRef might not even be neccisary, but unless I can confirm everything
         #can be written without needing some hacky index correction for the host player, it stays.
         #AFTERTHOUGHT: maybe I can get away with the host's index being something like -1? as a kind of psudo-index.

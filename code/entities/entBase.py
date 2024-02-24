@@ -3,7 +3,7 @@ from direct.task import Task
 
 class entBase(DirectObject):
     
-    tasks = (#(task name string, string attribute name of task function, sort)
+    tasks = (#(task name string, string attribute name of task function, optional: sort)
         )
     
     delayTasks = (#(task name string, string attribute name of task function, delay*NOT OPTIONAL*,  sort)

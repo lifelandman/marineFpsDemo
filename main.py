@@ -8,7 +8,7 @@ class game(ShowBase):
         ShowBase.__init__(self)
         load_prc_file("gameConfig.prc")
         self.optionPage = load_prc_file("options.prc")#Need a handle on this ConfigPage for saving modifications to it
-        #base.disableMouse()
+        base.disableMouse()
         
         #load_prc_file("gameConfig.prc")
 

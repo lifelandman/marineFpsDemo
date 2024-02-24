@@ -79,7 +79,8 @@ class playerEnt(npEnt):
         self.velocity_half_update(deltaTime)
         ##########Part 2: Perform Movement calculations
         self.np.set_pos(self.velocity)
-        self._rig.set_hpr(self._rig, self._hRot, self._pRot, 0)
+        self.np.set_h(self.np, self._hRot)#TODO:: This is insecure against aimhacking.
+        self._rig.set_p(self._rig, self._pRot)
         ##########Part 3: calculate the second-half-frame velocity change
         avgRate = globalClock.get_average_frame_rate()#this is a prediction for how long the next frame will be
         self.velocity_half_update(1/avgRate)#divide 1 by avgRate to get estimated next frame time
@@ -121,23 +122,54 @@ class playerEnt(npEnt):
         'serialize the variables'
 
 
-
-'''
-class clientPlayer():
-    tasks = (('update'),
-             ('calcMoveVariabes'))
-    'write those two functions'
+from panda3d.core import ConfigVariableString
+class clientPlayer(playerEnt):
+    def __init__(self, camera, **kwargs):
+        super().__init__(**kwargs)
+        self.camera = camera#See spawn and de_spawn below.
+        
+        
+    def spawn(self, sPoint: NodePath):
+        super().spawn(sPoint)
+        self.camera.reparent_to(self._rig)#If the camera isn't connected to the same node tree as geometry, geometry won't render. It'd be awkward to have even a moment where the camera is rendering a blank, so we detatch it here.
+        self.camera.set_pos_hpr(0,0,0,0,0,0)
+        self.addTask(self.get_inputs_keys, 'key-input task', sort =5)#it's awkward that we're controlling tasks like this and not through the entity system that was made for this purpose, but because players will spawn and despawn frequently
+        self.addTask(self.update, 'client_mover', sort = 10)#We have no choice but to do this so as to lighten the frame-time when the client player isn't spawned.
+    
+    def de_spawn(self):
+        super().de_spawn()
+        self.camera.reparent_to(base.render)
+        self.removeAllTasks()#NOTE:: If we add tasks that do persist when not spawned, we need to get rid of this and do it manually.
+    
+    #Defining button inputs as member variables. (same among all instances.)
+    #They are then redefined inside a function to update them once the game starts. (if we set the keybind strings in the member declarations, they will be set immediately as the file is imported and unchanged if the user changes the keybinds.)
+    #If splitscreen multiplayer ever becomes important for some reason, these need to be changed to instance variables.
+    key_for = None
+    key_bak = None
+    key_left = None
+    key_right = None
+    key_jump = None
+    key_crouch = None
+    def update_keybinds(self):
+        self.key_for = ConfigVariableString('move-forward', 'w').get_string_value()
+        self.key_bak = ConfigVariableString('move-backward', 's').get_string_value()
+        self.key_left = ConfigVariableString('move-left', 'arrow_left').get_string_value()
+        self.key_right = ConfigVariableString('move-right', 'arrow_right').get_string_value()
+        self.key_jump = ConfigVariableString('jump', 'space').get_string_value()
+        self.key_crouch = ConfigVariableString('crouch', 'shift').get_string_value()
+    
+    
+    
+    def get_inputs_keys(self):#We need a diffrent function if we ever want to add controller support
+        poller = base.mouseWatcherNode
+        self._xMove = poller.is_button_down(self.key_for) - poller.is_button_down(self.key_bak)
+        self._yMove = poller.is_button_down(self.key_right) - poller.is_button_down(self.key_left)
+        self._wantJump = poller.is_button_down(self.key_jump)
+        self._wantCrouch = poller.is_button_down(self.key_crouch)
+        
+        if base.mouseWatcherNode.hasMouse():#Get mouse movement
+            self._hRot, self._pRot = base.mouseWatcherNode.getMouseX(), base.mouseWatcherNode.getMouseY()
     
 
-class networkedPlayer():
-    events = ('...')#update the variables
-    def updateVariable(self):
-        #update variable
-        self.recievedVariable = True
-        
-    def update(self):
-        if self.recievedVariable:
-            pass#teleport
-        else:
-            super().update()
-'''
+class networkedPlayer(playerEnt):
+    pass

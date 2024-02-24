@@ -6,5 +6,5 @@ move-right arrow_right
 turn-left a
 turn-right d
 jump space
-dash shift
+crouch shift
 pause escape

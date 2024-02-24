@@ -1,17 +1,17 @@
 from direct.showbase.DirectObject import DirectObject
 
-#lighting imports
-from panda3d.core import DirectionalLight, AmbientLight
+
 #gravity
 from panda3d.physics import ForceNode, LinearVectorForce, PhysicsCollisionHandler
 #collision
-from panda3d.core import CollisionTraverser, BitMask32, CollisionBox, LPoint3f, CollisionNode
+from panda3d.core import CollisionTraverser
 #modelPool for cleanup
 from panda3d.core import ModelPool
 
 #our own code
 from .playerMgr import playerManager
 from .entities.entModels import spinningModel
+from .worldLoader import loadWorld
 
 class game_world(DirectObject):#I'll make this a direct object just incase I need it
     def __init__(self, lobby, worldFile = 'models/maps/terrain.egg'):
@@ -39,39 +39,13 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         self.handler.add_out_pattern('%fn-out')
 
         #Put world generation code calls here
-        self.world = base.loader.load_model(worldFile)
-        self.world.reparent_to(base.render)
-        
-
-        collisionNodes = self.world.find_all_matches('**/+CollisionNode')
-        if collisionNodes.get_num_paths() <= 0:
-            self.world.set_collide_mask(BitMask32(0b00001))
-        else:
-            for nodeP in collisionNodes:
-                nodeP.set_collide_mask(BitMask32(0b00001))
-        del collisionNodes
-        #TODO:: add plane for falling out of the world
-        
-
-        #set up lighting
-        base.render.set_shader_auto()
-        sun = DirectionalLight("sun")
-        sun.setColor((0.8, 0.77, 0.8, 1))
-        self.sunNp = base.render.attach_new_node(sun)
-        self.sunNp.setHpr(-30, -60, 0)
-        base.render.set_light(self.sunNp)
-        
-        sun = AmbientLight("ambient Light")
-        sun.setColor((0.2, 0.2, 0.2, 1))
-        self.amLNp = base.render.attach_new_node(sun)
-        base.render.set_light(self.amLNp)
-        del sun
+        loadWorld(self, worldFile)
 
         #Gamemode logic here:
         #TODO:: write gamemode logic
 
         #Spawn Player control logic here: TODO::actually write this, or even rewrite this whole file. most of this is carryover from other project.
-        self.playerMgr = playerManager()
+        self.playerMgr = playerManager(self)
         
     def destroy(self):
         self.ignoreAll()
@@ -84,7 +58,7 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         del self.handler
         del self.lobby
         
-        self.world.remove_node()
+        self.world.remove_node()##World setup was moved to diffrent file, this is still here for... totally valid reasons.
         ModelPool.garbage_collect()#Remove all models that are not still used.
 
         base.render.set_shader_off()
