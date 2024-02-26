@@ -47,6 +47,9 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         #Spawn Player control logic here: TODO::actually write this, or even rewrite this whole file. most of this is carryover from other project.
         self.playerMgr = playerManager(self)
         
+        ##TODO:: split off the below into a "game start" function and replace it with code that synchronises the game start once all users have completed the above logic.
+        self.playerMgr.round_start()
+        
     def destroy(self):
         self.ignoreAll()
         

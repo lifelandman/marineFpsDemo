@@ -11,6 +11,8 @@ from panda3d.core import CollisionNode, CollisionBox, CollisionSphere
 from panda3d.core import Point3, Vec3
 #Bullet raytracing:
 from panda3d.core import LensNode, PerspectiveLens
+#Tasks:
+from direct.task import Task
 ###ours:
 from .npEnt import npEnt
 
@@ -69,22 +71,29 @@ class playerEnt(npEnt):
     def spawn(self, sPoint: NodePath):
         self.np.reparent_to(base.render)
         self.np.set_pos(sPoint, 0,0,0)
+        self.np.set_h(sPoint, 0)
     
     def de_spawn(self):
         self.np.remove_node()#carefull not to lose the class refrence during this time!
         
-    def update(self):        
+    def update(self, task):
         ##########Part 1: calculate the half-frame change in velocity
         deltaTime = globalClock.get_dt()
         self.velocity_half_update(deltaTime)
         ##########Part 2: Perform Movement calculations
         self.np.set_pos(self.velocity)
+       
+        #Calculate rotation
         self.np.set_h(self.np, self._hRot)#TODO:: This is insecure against aimhacking.
+        
+        #if abs(self._rig.get_p()) < 90:
         self._rig.set_p(self._rig, self._pRot)
         ##########Part 3: calculate the second-half-frame velocity change
         avgRate = globalClock.get_average_frame_rate()#this is a prediction for how long the next frame will be
         self.velocity_half_update(1/avgRate)#divide 1 by avgRate to get estimated next frame time
         #Easy as that, right?
+        if task:
+            return Task.cont
         
     def velocity_half_update(self, scalar):
         '''
@@ -123,23 +132,58 @@ class playerEnt(npEnt):
 
 
 from panda3d.core import ConfigVariableString
+from panda3d.core import WindowProperties
 class clientPlayer(playerEnt):
+
     def __init__(self, camera, **kwargs):
         super().__init__(**kwargs)
         self.camera = camera#See spawn and de_spawn below.
+        self._inputActive = False
+        self.accept(self.key_pause, self.toggle_inputs)#GRahhh! should player classes even be entities?
+        self._lastP = 0
+        self._lastH = 0
         
         
+        
+    def toggle_inputs(self):
+        if self._inputActive:
+             self.removeTask('key-input task')
+             
+             props = WindowProperties()
+             props.set_cursor_hidden(False)
+             '''
+             props.set_mouse_mode(WindowProperties.M_relative)#These don't work on windows. TODO:: detect if we're on a os that can do this, and use these instead.
+             '''
+             base.win.requestProperties(props)
+             
+             
+             self._inputActive = False
+        else:
+            self.addTask(self.get_inputs_keys, 'key-input task', sort =5)#it's awkward that we're controlling tasks like this and not through the entity system that was made for this purpose, but because players will spawn and despawn frequently
+            
+            props = WindowProperties()#See above.
+            #props.set_cursor_hidden(True)
+            '''
+            props.set_mouse_mode(WindowProperties.M_absolute)#see above.
+            '''
+            base.win.requestProperties(props)
+            
+            
+            self._inputActive = True
+    
     def spawn(self, sPoint: NodePath):
         super().spawn(sPoint)
         self.camera.reparent_to(self._rig)#If the camera isn't connected to the same node tree as geometry, geometry won't render. It'd be awkward to have even a moment where the camera is rendering a blank, so we detatch it here.
         self.camera.set_pos_hpr(0,0,0,0,0,0)
-        self.addTask(self.get_inputs_keys, 'key-input task', sort =5)#it's awkward that we're controlling tasks like this and not through the entity system that was made for this purpose, but because players will spawn and despawn frequently
         self.addTask(self.update, 'client_mover', sort = 10)#We have no choice but to do this so as to lighten the frame-time when the client player isn't spawned.
+        self.toggle_inputs()
+        
     
     def de_spawn(self):
         super().de_spawn()
         self.camera.reparent_to(base.render)
-        self.removeAllTasks()#NOTE:: If we add tasks that do persist when not spawned, we need to get rid of this and do it manually.
+        self.toggle_inputs()
+        self.removeAllTasks()#Carefull!
     
     #Defining button inputs as member variables. (same among all instances.)
     #They are then redefined inside a function to update them once the game starts. (if we set the keybind strings in the member declarations, they will be set immediately as the file is imported and unchanged if the user changes the keybinds.)
@@ -150,6 +194,7 @@ class clientPlayer(playerEnt):
     key_right = None
     key_jump = None
     key_crouch = None
+    key_pause = None
     def update_keybinds(self):
         self.key_for = ConfigVariableString('move-forward', 'w').get_string_value()
         self.key_bak = ConfigVariableString('move-backward', 's').get_string_value()
@@ -157,18 +202,25 @@ class clientPlayer(playerEnt):
         self.key_right = ConfigVariableString('move-right', 'arrow_right').get_string_value()
         self.key_jump = ConfigVariableString('jump', 'space').get_string_value()
         self.key_crouch = ConfigVariableString('crouch', 'shift').get_string_value()
+        self.key_pause = ConfigVariableString('pause', 'escape').get_string_value()
     
     
     
-    def get_inputs_keys(self):#We need a diffrent function if we ever want to add controller support
+    def get_inputs_keys(self, task):#We need a diffrent function if we ever want to add controller support
         poller = base.mouseWatcherNode
         self._xMove = poller.is_button_down(self.key_for) - poller.is_button_down(self.key_bak)
         self._yMove = poller.is_button_down(self.key_right) - poller.is_button_down(self.key_left)
         self._wantJump = poller.is_button_down(self.key_jump)
         self._wantCrouch = poller.is_button_down(self.key_crouch)
         
-        if base.mouseWatcherNode.hasMouse():#Get mouse movement
-            self._hRot, self._pRot = base.mouseWatcherNode.getMouseX(), base.mouseWatcherNode.getMouseY()
+        pointer = base.win.get_pointer(0)
+        if pointer.get_in_window():#Get mouse movement
+            scSize = base.win.getProperties()
+            xSize, ySize = scSize.get_x_size() / 2, scSize.get_y_size() / 2
+            self._hRot, self._pRot = -((pointer.get_x() - xSize) // 3) * 0.7, -((pointer.get_y() - ySize) // 3) * 0.7
+            base.win.movePointer(0, int(xSize), int(ySize))
+        else: self._hRot, self._pRot = 0,0
+        return Task.cont
     
 
 class networkedPlayer(playerEnt):

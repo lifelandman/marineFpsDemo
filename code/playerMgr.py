@@ -1,6 +1,8 @@
 from direct.showbase.DirectObject import DirectObject
 from direct.task import Task
 
+from panda3d.core import NodePath
+
 from .entities.playerEnts import clientPlayer, networkedPlayer
 
 class playerManager(DirectObject):
@@ -13,8 +15,10 @@ class playerManager(DirectObject):
         )
     
     def __init__(self, gameObj):
+        clientPlayer.update_keybinds(clientPlayer)
         self.gameObj = gameObj
         self.playerEnts = []
+        self.build_players()
         
     def build_players(self):
         players = self.gameObj.lobby.tracker.get_players().keys()#Note:: if we change how the netTracker works, we need to change this as well.
@@ -23,7 +27,7 @@ class playerManager(DirectObject):
         for playerName in players:
             if playerName in knownPlayerNames:
                 continue
-            else: self.add_player()
+            else: self.add_player(playerName)
             
     def add_player(self, name):
         if name == self.gameObj.lobby.tracker.pid_2_name(self.gameObj.lobby.memVal):#We're the local player. ALSO:: Another thing that needs to change with a rework of netTracker
@@ -33,7 +37,25 @@ class playerManager(DirectObject):
             self.playerEnts.append(networkedPlayer(name = name))
             
     def round_start(self):
-        pass
+        spawnPoints = self.gameObj.world.find_all_matches('**/=spawnPoint')
+        
+        stdPoint = NodePath('fakes')#for emergencies.
+        stdPoint.reparent_to(base.render)
+        stdPoint.set_z(100)
+        
+        numPaths = spawnPoints.get_num_paths()
+        if numPaths <= 0: defaultPos = True
+        else: defaultPos = False
+        
+        i = 0
+        for player in self.playerEnts:
+            if defaultPos or i >= numPaths:
+                player.spawn()
+            else:
+                point = spawnPoints.get_path(i)
+                player.spawn(point)
+            i += 1
+        stdPoint.remove_node()
             
     def delete(self):
         self.ignoreAll()

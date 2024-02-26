@@ -15,6 +15,7 @@ class game(ShowBase):
         globalClock.set_average_frame_rate_interval(1.0)
 
         #messenger.toggleVerbose()
+        self.setFrameRateMeter(True)
         self.menu = menu_ui(indirectStart)
 
 

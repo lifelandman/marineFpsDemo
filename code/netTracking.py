@@ -30,7 +30,7 @@ class netPlayerTracker(DirectObject):#TODO:: indecies are not used outside of a 
         
     
     def pid_2_name(self, index):
-        return self.names2ids[index]
+        return self.ids2names[index]
     
     
     def get_names_minus_host(self):
