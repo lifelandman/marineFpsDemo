@@ -17,7 +17,7 @@ from panda3d.core import Quat
 #Tasks:
 from direct.task import Task
 ###Math:
-from math import copysign, sin, cos, radians
+from math import copysign
 ###ours:
 from .npEnt import npEnt
 
@@ -133,6 +133,7 @@ class playerEnt(npEnt):
         if task:
             return Task.cont
         
+        
     def velocity_half_update(self, scalar):
         '''
         scalar should be deltatime for first half, average frame rate for second
@@ -142,27 +143,43 @@ class playerEnt(npEnt):
             
         speedLimit = 20#maximum horizontal speed
         walkAccel = 2#acceleration while walking per second
-        airAccel = 1#acceleration while in air per second
+        airAccel = 0.1#acceleration while in air per second
+        friction = 0.85#deceleration/acceleration resistance per second. If velocity in a direction is less than this, velocity is stopped in a short period of time
+        
+        ##Adjust values
+        if not (self._yMove or self._xMove): friction *= 2
+        exceedControlSpeed = self.velocity.get_xy().length() < 10
         #Y velosity calculations
         if self._yMove != 0:
-            if not self._isAirborne and abs(self.velocity.get_x()) < 20:
+            if not self._isAirborne and exceedControlSpeed:
                 self.velocity.add_y((self._yMove*walkAccel*scalar)/2)
             elif self._isAirborne:#note we don't cap velocity while in air
                 self.velocity.add_y((self._yMove*airAccel*scalar)/2)
         if abs(self.velocity.get_y()) > 20:
             val = self.velocity.get_y()
-            self.velocity.set_y(20*(val/abs(val)))#cap velocity at abs 20
+            self.velocity.set_y(copysign(20, val))#cap velocity at abs 20
             del val
+        if not self._isAirborne:#extra stuff for only on the ground
+            if abs(self.velocity.get_y()) > 0.2:#Add friction
+                self.velocity.add_y(-copysign(friction, self.velocity.get_y())*scalar / 2)
+            elif not self._yMove and self.velocity.get_y() != 0:
+                self.velocity.set_y(0)
+                
         #X velosity calculations
         if self._xMove != 0:
-            if not self._isAirborne and abs(self.velocity.get_y()) < 20:
+            if not self._isAirborne and exceedControlSpeed:
                 self.velocity.add_x((self._xMove*walkAccel*scalar)/2)
             elif self._isAirborne:#note we don't cap velocity while in air
                 self.velocity.add_x((self._xMove*airAccel*scalar)/2)
         if abs(self.velocity.get_x()) > 20:
             val = self.velocity.get_x()
-            self.velocity.set_x(20*(val/abs(val)))#cap velocity at abs 20
+            self.velocity.set_x(copysign(20, val))#cap velocity at abs 20
             del val
+        if not self._isAirborne:#extra stuff for only on the ground
+            if abs(self.velocity.get_x()) > 0.2:#Add friction
+                self.velocity.add_x(-copysign(friction, self.velocity.get_x())*scalar / 2)
+            elif not self._xMove and self.velocity.get_x() != 0:
+                self.velocity.set_x(0)
             
     ########
     #Events#
