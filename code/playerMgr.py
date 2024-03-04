@@ -18,6 +18,7 @@ class playerManager(DirectObject):
         clientPlayer.update_keybinds(clientPlayer)
         self.gameObj = gameObj
         self.playerEnts = []
+        self.clientEnt = None#if we ever add split-screen multiplayer, make this a list.
         self.build_players()
         
     def build_players(self):
@@ -32,9 +33,13 @@ class playerManager(DirectObject):
     def add_player(self, name):
         if name == self.gameObj.lobby.tracker.pid_2_name(self.gameObj.lobby.memVal):#We're the local player. ALSO:: Another thing that needs to change with a rework of netTracker
             newP = clientPlayer(name = name, camera = base.camera)
+            newP.add_colliders(base.cTrav, self.gameObj.handler)
+            self.clientEnt = newP
             self.playerEnts.append(newP)
         else:
-            self.playerEnts.append(networkedPlayer(name = name))
+            newP = networkedPlayer(name = name)
+            newP.add_colliders(base.cTrav, self.gameObj.handler)
+            self.playerEnts.append(newP)
             
     def round_start(self):
         spawnPoints = self.gameObj.world.find_all_matches('**/=spawnPoint')
@@ -50,16 +55,24 @@ class playerManager(DirectObject):
         i = 0
         for player in self.playerEnts:
             if defaultPos or i >= numPaths:
-                player.spawn()
+                player.spawn(stdPoint)
             else:
                 point = spawnPoints.get_path(i)
                 player.spawn(point)
             i += 1
         stdPoint.remove_node()
             
+    def clear_players(self):
+        for ent in self.playerEnts:
+            ent.destroy()
+        self.playerEnts = []
+        self.clientEnt = None
+        
     def delete(self):
         self.ignoreAll()
+        self.clear_players()
         base.camera.reparent_to(base.render)
+        base.camera.set_pos(0,0,0)
         #TODO:: along with the netTracker rework, it would be good to make some functionality for players to rejoin a game if they dissconnect,
         #so we'd tell netTracker that it's okay to flush disconnected players.
         del self.gameObj#gameObj won't garbage collect if we don't delete

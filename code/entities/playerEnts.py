@@ -9,10 +9,15 @@ from panda3d.core import NodePath
 #collision:
 from panda3d.core import CollisionNode, CollisionBox, CollisionSphere
 from panda3d.core import Point3, Vec3
+from panda3d.core import BitMask32
 #Bullet raytracing:
 from panda3d.core import LensNode, PerspectiveLens
+#Rotation
+from panda3d.core import Quat
 #Tasks:
 from direct.task import Task
+###Math:
+from math import copysign, sin, cos, radians
 ###ours:
 from .npEnt import npEnt
 
@@ -20,19 +25,31 @@ class playerEnt(npEnt):
     
     skipAccept = True#we don't accept geometry.
     
+    ##################
+    #Creation Methods#
+    ##################
     def __init__(self, **kwargs):
         super().__init__(**kwargs)#make self.np
-        
+        self.np.set_collide_mask(BitMask32(0b00010))
+        self.np.set_tag('player', self.name)
+        self.accept(self.name + "-into-ground", self.tangible_collide_into_event)
+
         #Create bounding box
         cNode = CollisionNode(self.name + '_bounding_box')
         cNode.add_solid(CollisionBox(Point3(0,0,0), 1,1,2))
+        cNode.set_from_collide_mask(BitMask32(0b10110))#TODO:: change this later to have team collision setting
         self.bBox = self.np.attach_new_node(cNode)
         del cNode
         
         #Create water ball
         cNode = CollisionNode(self.name + '_water_ball')
-        cNode.add_solid(CollisionSphere(0,0,0,0.2))
+        orb = CollisionSphere(0,0,0,0.2)
+        orb.set_tangible(False)#For some reason python complains when we set tangible after adding orb as a solid
+        cNode.add_solid(orb)
+        del orb
+        cNode.set_from_collide_mask(BitMask32(0b01000))
         self.wBall = self.np.attach_new_node(cNode)
+        self.wBall.set_collide_mask(BitMask32(0b00000))#No into collisions
         del cNode
         ##TODO::: assign bitmasks to above collisionNodes
         #Create bullet LensNode.
@@ -67,27 +84,48 @@ class playerEnt(npEnt):
         
         self.wBall.show()
         self.bBox.show()
+    
+    def add_colliders(self, trav, handler):
+        trav.add_collider(self.bBox, handler)
+        handler.add_collider(self.bBox, self.np)
+        trav.add_collider(self.bBox, handler)
+        handler.add_collider(self.bBox, self.np)
+        
+    ##########
+    #Spawning#
+    ##########
         
     def spawn(self, sPoint: NodePath):
         self.np.reparent_to(base.render)
         self.np.set_pos(sPoint, 0,0,0)
         self.np.set_h(sPoint, 0)
+        self._isAirborne = True
     
     def de_spawn(self):
-        self.np.remove_node()#carefull not to lose the class refrence during this time!
+        self.np.detach_node()#carefull not to lose the class refrence during this time!
+        
+    ##################
+    #Movement Methods#
+    ##################
+    
+    upVec = Vec3(0,0,1)#standard up vector
         
     def update(self, task):
         ##########Part 1: calculate the half-frame change in velocity
         deltaTime = globalClock.get_dt()
         self.velocity_half_update(deltaTime)
         ##########Part 2: Perform Movement calculations
-        self.np.set_pos(self.velocity)
+        self.np.set_pos(self.np, self.velocity)
        
         #Calculate rotation
         self.np.set_h(self.np, self._hRot)#TODO:: This is insecure against aimhacking.
+        #Rotate velocity
+        turn = Quat()
+        turn.set_from_axis_angle(-self._hRot, self.upVec)
+        self.velocity = Vec3(turn.xform(self.velocity))
         
-        #if abs(self._rig.get_p()) < 90:
-        self._rig.set_p(self._rig, self._pRot)
+        if abs(self._rig.get_p()) < 90:
+            self._rig.set_p(self._rig, self._pRot)
         ##########Part 3: calculate the second-half-frame velocity change
         avgRate = globalClock.get_average_frame_rate()#this is a prediction for how long the next frame will be
         self.velocity_half_update(1/avgRate)#divide 1 by avgRate to get estimated next frame time
@@ -104,20 +142,10 @@ class playerEnt(npEnt):
             
         speedLimit = 20#maximum horizontal speed
         walkAccel = 2#acceleration while walking per second
-        airAccel = 0.3#acceleration while in air per second
-        #X velosity calculations
-        if self._xMove != 0:
-            if not self._isAirborne and abs(self.velocity.get_x()) > 20:
-                self.velocity.add_x((self._xMove*walkAccel*scalar)/2)
-            elif self._isAirborne:#note we don't cap velocity while in air
-                self.velocity.add_x((self._xMove*airAccel*scalar)/2)
-        if abs(self.velocity.get_x()) > 20:
-            val = self.velocity.get_x()
-            self.velocity.set_x(20*(val/abs(val)))#cap velocity at abs 20
-            del val
+        airAccel = 1#acceleration while in air per second
         #Y velosity calculations
         if self._yMove != 0:
-            if not self._isAirborne and abs(self.velocity.get_y()) > 20:
+            if not self._isAirborne and abs(self.velocity.get_x()) < 20:
                 self.velocity.add_y((self._yMove*walkAccel*scalar)/2)
             elif self._isAirborne:#note we don't cap velocity while in air
                 self.velocity.add_y((self._yMove*airAccel*scalar)/2)
@@ -125,10 +153,39 @@ class playerEnt(npEnt):
             val = self.velocity.get_y()
             self.velocity.set_y(20*(val/abs(val)))#cap velocity at abs 20
             del val
+        #X velosity calculations
+        if self._xMove != 0:
+            if not self._isAirborne and abs(self.velocity.get_y()) < 20:
+                self.velocity.add_x((self._xMove*walkAccel*scalar)/2)
+            elif self._isAirborne:#note we don't cap velocity while in air
+                self.velocity.add_x((self._xMove*airAccel*scalar)/2)
+        if abs(self.velocity.get_x()) > 20:
+            val = self.velocity.get_x()
+            self.velocity.set_x(20*(val/abs(val)))#cap velocity at abs 20
+            del val
+            
+    ########
+    #Events#
+    ########
+            
+    def tangible_collide_into_event(self, entry):
+        vector = entry.get_surface_normal(entry.get_from_node_path())#WARNING!! Unapplied rotation transforms like to fuck with this!#TODO:: Figure out what I meant from this.
+        if vector.get_z() > 0.6:#(Above comment is copied from code from other project.)
+            self._isAirborne = False
+        #TODO:: negate velocity if we run into a wall.
+        
+    ####################
+    #Management Methods#
+    ####################        
         
     def interrogate(self):
         pass
         'serialize the variables'
+    
+
+    def destroy(self):
+        self.de_spawn()
+        super().destroy()
 
 
 from panda3d.core import ConfigVariableString
@@ -140,8 +197,6 @@ class clientPlayer(playerEnt):
         self.camera = camera#See spawn and de_spawn below.
         self._inputActive = False
         self.accept(self.key_pause, self.toggle_inputs)#GRahhh! should player classes even be entities?
-        self._lastP = 0
-        self._lastH = 0
         
         
         
@@ -198,8 +253,8 @@ class clientPlayer(playerEnt):
     def update_keybinds(self):
         self.key_for = ConfigVariableString('move-forward', 'w').get_string_value()
         self.key_bak = ConfigVariableString('move-backward', 's').get_string_value()
-        self.key_left = ConfigVariableString('move-left', 'arrow_left').get_string_value()
-        self.key_right = ConfigVariableString('move-right', 'arrow_right').get_string_value()
+        self.key_left = ConfigVariableString('move-left', 'a').get_string_value()
+        self.key_right = ConfigVariableString('move-right', 'd').get_string_value()
         self.key_jump = ConfigVariableString('jump', 'space').get_string_value()
         self.key_crouch = ConfigVariableString('crouch', 'shift').get_string_value()
         self.key_pause = ConfigVariableString('pause', 'escape').get_string_value()
@@ -208,17 +263,17 @@ class clientPlayer(playerEnt):
     
     def get_inputs_keys(self, task):#We need a diffrent function if we ever want to add controller support
         poller = base.mouseWatcherNode
-        self._xMove = poller.is_button_down(self.key_for) - poller.is_button_down(self.key_bak)
-        self._yMove = poller.is_button_down(self.key_right) - poller.is_button_down(self.key_left)
+        self._yMove = poller.is_button_down(self.key_for) - poller.is_button_down(self.key_bak)
+        self._xMove = poller.is_button_down(self.key_right) - poller.is_button_down(self.key_left)
         self._wantJump = poller.is_button_down(self.key_jump)
         self._wantCrouch = poller.is_button_down(self.key_crouch)
         
         pointer = base.win.get_pointer(0)
         if pointer.get_in_window():#Get mouse movement
             scSize = base.win.getProperties()
-            xSize, ySize = scSize.get_x_size() / 2, scSize.get_y_size() / 2
+            xSize, ySize = scSize.get_x_size() // 2, scSize.get_y_size() // 2
             self._hRot, self._pRot = -((pointer.get_x() - xSize) // 3) * 0.7, -((pointer.get_y() - ySize) // 3) * 0.7
-            base.win.movePointer(0, int(xSize), int(ySize))
+            base.win.movePointer(0, xSize, ySize)
         else: self._hRot, self._pRot = 0,0
         return Task.cont
     

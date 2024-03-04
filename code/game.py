@@ -1,10 +1,8 @@
 from direct.showbase.DirectObject import DirectObject
 
 
-#gravity
-from panda3d.physics import ForceNode, LinearVectorForce, PhysicsCollisionHandler
 #collision
-from panda3d.core import CollisionTraverser
+from panda3d.core import CollisionHandlerPusher, CollisionTraverser
 #modelPool for cleanup
 from panda3d.core import ModelPool
 
@@ -20,20 +18,22 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         super().__init__()
         
         #enable physics
-        base.enableParticles()
+        #base.enableParticles()
 
         #Create a universal standard of gravity. TODO:: make it so servers can adjust this
-        self.gravity = base.render.attach_new_node(ForceNode("gravitational force"))
-        self.gravity.node().add_force(LinearVectorForce(0,0,-10))
+        self.gravity = 0.983
 
         #World's collision management
         base.cTrav = CollisionTraverser()
         #base.cTrav.setRespectPrevTransform(True)
-        self.handler = PhysicsCollisionHandler()
+        self.handler = CollisionHandlerPusher()
+        self.handler.add_in_pattern("%(player)fh%(player)ft-into-ground%(water)ix%(trigger)ix")
         
+        '''
         self.handler.set_static_friction_coef(0.99)
         self.handler.set_dynamic_friction_coef(1)
         self.handler.set_almost_stationary_speed(0.2)
+        '''
 
         self.handler.add_in_pattern('%fn-into')#TODO:: make player collisions more robust, for when we add depth tests for knockback and whatnot.
         self.handler.add_out_pattern('%fn-out')
@@ -56,8 +56,11 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         self.playerMgr.delete()
         
         base.disableParticles()
+        
+        base.cTrav.clear_colliders()
         base.cTrav = None
         
+        self.handler.clear_colliders()
         del self.handler
         del self.lobby
         
