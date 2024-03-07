@@ -27,7 +27,10 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         base.cTrav = CollisionTraverser()
         #base.cTrav.setRespectPrevTransform(True)
         self.handler = CollisionHandlerPusher()
+        #Add event patterns
         self.handler.add_in_pattern("%(player)fh%(player)ft-into-ground%(water)ix%(trigger)ix")
+        self.handler.add_out_pattern("%(player)fh%(player)ft-out-ground%(water)ix%(trigger)ix")
+        self.handler.add_again_pattern("%(player)fh%(player)ft-again-ground%(water)ix%(trigger)ix")
         
         '''
         self.handler.set_static_friction_coef(0.99)

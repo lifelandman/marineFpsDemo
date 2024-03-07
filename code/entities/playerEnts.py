@@ -17,7 +17,7 @@ from panda3d.core import Quat
 #Tasks:
 from direct.task import Task
 ###Math:
-from math import copysign
+from math import copysign, sqrt
 ###ours:
 from .npEnt import npEnt
 
@@ -32,7 +32,10 @@ class playerEnt(npEnt):
         super().__init__(**kwargs)#make self.np
         self.np.set_collide_mask(BitMask32(0b00010))
         self.np.set_tag('player', self.name)
+        #accept collision events
         self.accept(self.name + "-into-ground", self.tangible_collide_into_event)
+        self.accept(self.name + "-out-ground", self.tangible_collide_out_event)
+        self.accept(self.name + "-again-ground", self.tangible_collide_again_event)
 
         #Create bounding box
         cNode = CollisionNode(self.name + '_bounding_box')
@@ -139,11 +142,13 @@ class playerEnt(npEnt):
         scalar should be deltatime for first half, average frame rate for second
         '''
         if self._isAirborne:#changing z velocity is a bad idea if we're touching the ground.
-            self.velocity.add_z(-((9.3*scalar)/2))#Subtract vertical velocity for half a frame. #TODO:: if you want weight modifiers, add them here.
+            self.velocity.add_z(-((8*scalar)/2))#Subtract vertical velocity for half a frame. #TODO:: if you want weight modifiers, add them here.#8 is gravity
+        elif self._wantJump:
+            self.velocity.add_z(sqrt(5)/2)
             
         speedLimit = 20#maximum horizontal speed
         walkAccel = 2#acceleration while walking per second
-        airAccel = 0.1#acceleration while in air per second
+        airAccel = 0.5#acceleration while in air per second
         friction = 0.85#deceleration/acceleration resistance per second. If velocity in a direction is less than this, velocity is stopped in a short period of time
         
         ##Adjust values
@@ -190,6 +195,22 @@ class playerEnt(npEnt):
         if vector.get_z() > 0.6:#(Above comment is copied from code from other project.)
             self._isAirborne = False
         #TODO:: negate velocity if we run into a wall.
+        
+    def tangible_collide_again_event(self, entry):
+        vector = entry.get_surface_normal(entry.get_from_node_path())
+        if self._isAirborne:
+            if vector.get_z() > 0.6:
+                self._isAirborne = False
+        self.bend_velocity(vector)
+                
+    def bend_velocity(self, vector):
+        veloVec = self.velocity.normalized()
+        #angle = veloVec.angle_deg(vector)
+        if vector.get_z() > 0.93:
+            self.velocity.set_z(0)
+    
+    def tangible_collide_out_event(self, entry):
+        self._isAirborne = True
         
     ####################
     #Management Methods#
