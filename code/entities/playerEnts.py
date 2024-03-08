@@ -204,10 +204,17 @@ class playerEnt(npEnt):
         self.bend_velocity(vector)
                 
     def bend_velocity(self, vector):
+        if self.velocity.length() <= 0.0001:
+            return
         veloVec = self.velocity.normalized()
-        #angle = veloVec.angle_deg(vector)
+        angle = veloVec.angle_deg(vector)
         if vector.get_z() > 0.93:
             self.velocity.set_z(0)
+        if angle >= 1:
+            norDot = vector.dot(self.velocity)
+            mod = Vec3(vector)
+            mod *= norDot
+            self.velocity -= mod
     
     def tangible_collide_out_event(self, entry):
         self._isAirborne = True
@@ -255,7 +262,7 @@ class clientPlayer(playerEnt):
             self.addTask(self.get_inputs_keys, 'key-input task', sort =5)#it's awkward that we're controlling tasks like this and not through the entity system that was made for this purpose, but because players will spawn and despawn frequently
             
             props = WindowProperties()#See above.
-            #props.set_cursor_hidden(True)
+            props.set_cursor_hidden(True)
             '''
             props.set_mouse_mode(WindowProperties.M_absolute)#see above.
             '''
@@ -275,7 +282,6 @@ class clientPlayer(playerEnt):
     def de_spawn(self):
         super().de_spawn()
         self.camera.reparent_to(base.render)
-        self.toggle_inputs()
         self.removeAllTasks()#Carefull!
     
     #Defining button inputs as member variables. (same among all instances.)
@@ -314,6 +320,12 @@ class clientPlayer(playerEnt):
             base.win.movePointer(0, xSize, ySize)
         else: self._hRot, self._pRot = 0,0
         return Task.cont
+    
+    def destroy(self):
+        if self._inputActive:
+            self.toggle_inputs()
+        #self.ignoreAll()
+        super().destroy()
     
 
 class networkedPlayer(playerEnt):
