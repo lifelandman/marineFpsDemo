@@ -145,7 +145,7 @@ class lobby_ui(DirectObject):
                 count +=1
         else:
             count = 1
-            for player, index in players.items():
+            for player, index in players:
                 name = player.split("<")[0]
                 self.pList.append(self.player_label(name, count))
                 count +=1
