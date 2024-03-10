@@ -22,13 +22,13 @@ class playerManager(DirectObject):
         self.build_players()
         
     def build_players(self):
-        players = self.gameObj.lobby.tracker.get_players().keys()#Note:: if we change how the netTracker works, we need to change this as well.
+        players = self.gameObj.lobby.tracker.get_players()
         knownPlayerNames = [player.name for player in self.playerEnts]
         
-        for playerName in players:
-            if playerName in knownPlayerNames:
+        for playername, pid in players:
+            if playername in knownPlayerNames:
                 continue
-            else: self.add_player(playerName)
+            else: self.add_player(playername)
             
     def add_player(self, name):
         if name == self.gameObj.lobby.tracker.pid_2_name(self.gameObj.lobby.memVal):#We're the local player. ALSO:: Another thing that needs to change with a rework of netTracker

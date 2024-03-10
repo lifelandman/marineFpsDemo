@@ -65,7 +65,7 @@ class lobby_ui(DirectObject):
                 self.server.send_direct("alias", int(pid), (newName, pid))
                 x = []
                 players = self.tracker.get_players()
-                for name, index in players.items():
+                for name, index in players:
                     x.append(name)
                     x.append(str(index))
                 while len(x) < 8:
@@ -137,7 +137,7 @@ class lobby_ui(DirectObject):
         players = self.tracker.get_players()
         if self.isHost:
             count = 1
-            for player, index in players.items():
+            for player, index in players:
                 if index == "host":
                     self.pList.append(self.player_label(player, count))
                 else:
