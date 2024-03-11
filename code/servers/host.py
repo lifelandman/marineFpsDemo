@@ -29,7 +29,7 @@ class hostServer():
         self.cListener.add_connection(self.tcpSocket)
         #TASKS
         taskMgr.add(self.listener_poll, "listenerPoll")
-        taskMgr.add(self.reader_poll, "readerPoll")
+        taskMgr.add(self.reader_poll, "readerPoll", 1)
         taskMgr.add(self.send_messages, "sendPoll")
 
         taskMgr.doMethodLater(3, self.disconnect_check, "disconnectPoll")
@@ -139,7 +139,6 @@ class hostServer():
         mesg: event to send to connections.
         val: values of said event. should be enclosed in a tuple.
         '''
-        #TODO:: add test make sure this is valid send event
         if val:
             if msgFilterValue(mesg):
                 self.outBox.append(mesg)

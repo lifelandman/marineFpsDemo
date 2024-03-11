@@ -92,12 +92,10 @@ class lobby_ui(DirectObject):
             self.make_player_list()
         
     def introduce(self, memVal):
-        print('introduce')
         self.server.add_message("connect", (ConfigVariableString('my-name', "player").get_string_value(), memVal))
         self.acceptOnce("alias", self.accept_alias)
 
     def accept_alias(self, name, memVal):
-        print('alias')
         self.name = name
         self.memVal = memVal
         

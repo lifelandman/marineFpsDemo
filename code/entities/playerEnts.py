@@ -17,7 +17,7 @@ from panda3d.core import Quat
 #Tasks:
 from direct.task import Task
 ###Math:
-from math import copysign, sqrt
+from math import copysign, sqrt, isclose
 ###ours:
 from .npEnt import npEnt
 
@@ -62,6 +62,7 @@ class playerEnt(npEnt):
         self._rig = NodePath(self.name + "_rig")#this is the axis of pitch rotation for both the raycast LensNode and the camera. We don't just parent the camera to the LensNode because we might want an offset for the bullet origin.
         self._rig.reparent_to(self.np)
         self._rig.set_z(0.9)
+        loader.loadModel('jack').reparent_to(self._rig)
 
         self._bulletNode = LensNode(self.name + "_bulletLens", PerspectiveLens())#Weapons will modify these properties when they're set active.
         self._bulletLens = self._bulletNode.get_lens()
@@ -113,7 +114,7 @@ class playerEnt(npEnt):
     
     upVec = Vec3(0,0,1)#standard up vector
         
-    def update(self, task):
+    def update(self, task = None):
         ##########Part 1: calculate the half-frame change in velocity
         deltaTime = globalClock.get_dt()
         self.velocity_half_update(deltaTime)
@@ -224,8 +225,7 @@ class playerEnt(npEnt):
     ####################        
         
     def interrogate(self):
-        pass
-        'serialize the variables'
+        return "playData{" + self.name, ((self._yMove, self._xMove, self._wantJump, self._wantCrouch, self._hRot, self._pRot, self.velocity.get_x(), self.velocity.get_y(), self.velocity.get_z(), self.np.get_h(), self._rig.get_p(), self._isAirborne),)
     
 
     def destroy(self):
@@ -236,14 +236,32 @@ class playerEnt(npEnt):
 from panda3d.core import ConfigVariableString
 from panda3d.core import WindowProperties
 class clientPlayer(playerEnt):
+    
+    over = False#cheap hack to save a logic check in playerMgr
 
     def __init__(self, camera, **kwargs):
         super().__init__(**kwargs)
         self.camera = camera#See spawn and de_spawn below.
         self._inputActive = False
         self.accept(self.key_pause, self.toggle_inputs)#GRahhh! should player classes even be entities?
+        self.accept("expectOveride", self.oRTrig)
         
+    def oRTrig(self):
+        self.acceptOnce('playData{' + self.name, self.storeProps)
         
+    def storeProps(self, val):
+        self._yMove = val[0]
+        self._xMove = val[1]
+        self._wantJump = val[2]
+        self._wantCrouch = val[3]
+        self._hRot = val[4]
+        self._pRot = val[5]
+        self.velocity.set_x(val[6])
+        self.velocity.set_y(val[7])
+        self.velocity.set_z(val[8])
+        self.np.set_h(val[9])
+        self._rig.set_p(val[10])
+        self._isAirborne = (val[11])
         
     def toggle_inputs(self):
         if self._inputActive:
@@ -328,5 +346,66 @@ class clientPlayer(playerEnt):
         super().destroy()
     
 
-class networkedPlayer(playerEnt):
-    pass
+class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, _hRot, _pRot, vX,vY,vZ,h,p,is_airborne)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.addTask(self.checkMove, self.name + 'check movement', sort = 10)
+        self.accept('playData{' + self.name, self.storePDat)
+        self.pDat = None
+        self.over = False
+        
+    def storePDat(self, val):
+        self.pDat = val
+        
+    def checkMove(self, taskobj):
+        if self.pDat:
+            self._yMove = self.pDat[0]
+            self._xMove = self.pDat[1]
+            self._wantJump = self.pDat[2]
+            self._wantCrouch = self.pDat[3]
+            self._hRot = self.pDat[4]
+            self._pRot = self.pDat[5]
+            
+            self.update()
+            if (self._isAirborne == self.pDat[11]) and self.velocity.almost_equal(Vec3(self.pDat[6], self.pDat[7], self.pDat[8])) and isclose(self.pDat[9], self.np.get_h()) and isclose(self.pDat[9], self._rig.get_p()):
+                self.velocity.set_x(self.pDat[6])
+                self.velocity.set_y(self.pDat[7])
+                self.velocity.set_z(self.pDat[8])
+                self.np.set_h(self.pDat[9])
+                self._rig.set_p(self.pDat[10])
+            else:
+                self.over = True#Force client into accurate position
+
+            self.pDat = None
+        else: self.update()
+        return Task.cont
+
+class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seems legit nor sends out instructions.
+    over = False#This might not be nessisary???
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.addTask(self.Move, self.name + 'move', sort = 10)
+        self.accept('playData{' + self.name, self.storePDat)
+        self.pDat = None
+        
+    def storePDat(self, val):
+        self.pDat = val
+        
+    def Move(self, taskobj):
+        if self.pDat:
+            self._yMove = self.pDat[0]
+            self._xMove = self.pDat[1]
+            self._wantJump = self.pDat[2]
+            self._wantCrouch = self.pDat[3]
+            self._hRot = self.pDat[4]
+            self._pRot = self.pDat[5]
+            self.velocity.set_x(self.pDat[6])
+            self.velocity.set_y(self.pDat[7])
+            self.velocity.set_z(self.pDat[8])
+            self.np.set_h(self.pDat[9])
+            self._rig.set_p(self.pDat[10])
+            self._isAirborne = (self.pDat[11])
+
+            self.pDat = None
+        self.update()
+        return Task.cont

@@ -43,6 +43,11 @@ class netPlayerTracker(DirectObject):
             return True
         else:
             return False
+        
+    def ready_test(self, input):
+        if len(input) == len(self.ids):
+            return True
+        else: return False
     
     def delete(self):
         self.ignoreAll()

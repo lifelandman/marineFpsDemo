@@ -3,7 +3,7 @@ from direct.task import Task
 
 from panda3d.core import NodePath
 
-from .entities.playerEnts import clientPlayer, networkedPlayer
+from .entities.playerEnts import clientPlayer, hostNetPlayer, clientNetPlayer
 
 class playerManager(DirectObject):
     
@@ -17,6 +17,7 @@ class playerManager(DirectObject):
     def __init__(self, gameObj):
         clientPlayer.update_keybinds(clientPlayer)
         self.gameObj = gameObj
+        self.isHost = self.gameObj.lobby.isHost
         self.playerEnts = []
         self.clientEnt = None#if we ever add split-screen multiplayer, make this a list.
         self.build_players()
@@ -37,11 +38,15 @@ class playerManager(DirectObject):
             self.clientEnt = newP
             self.playerEnts.append(newP)
         else:
-            newP = networkedPlayer(name = name)
+            newP = hostNetPlayer(name = name) if self.isHost else clientNetPlayer(name = name)
             newP.add_colliders(base.cTrav, self.gameObj.handler)
             self.playerEnts.append(newP)
             
     def round_start(self):
+        self.spawn_wave()
+        self.addTask(self.distribute_players, "distribute players", 100)#his should be THE last task.
+            
+    def spawn_wave(self):
         spawnPoints = self.gameObj.world.find_all_matches('**/=spawnPoint')
         
         stdPoint = NodePath('fakes')#for emergencies.
@@ -61,6 +66,18 @@ class playerManager(DirectObject):
                 player.spawn(point)
             i += 1
         stdPoint.remove_node()
+        
+    def distribute_players(self, task):
+        if self.isHost:
+            for player in self.playerEnts:
+                if player.over:
+                    if not self.gameObj.lobby.server.send_direct("expectOveride", self.gameObj.lobby.tracker.get_id(player.name)):
+                        continue#something went wrong here. Potentially flag playerEnt rebuild
+                    player.over = False
+                self.gameObj.lobby.server.add_message(*player.interrogate())
+        else:
+            self.gameObj.lobby.server.add_message(*self.clientEnt.interrogate())
+        return Task.cont
             
     def clear_players(self):
         for ent in self.playerEnts:
@@ -70,10 +87,12 @@ class playerManager(DirectObject):
         
     def delete(self):
         self.ignoreAll()
+        self.removeAllTasks()
         self.clear_players()
         base.camera.reparent_to(base.render)
         base.camera.set_pos(0,0,0)
         #TODO:: along with the netTracker rework, it would be good to make some functionality for players to rejoin a game if they dissconnect,
         #so we'd tell netTracker that it's okay to flush disconnected players.
         del self.gameObj#gameObj won't garbage collect if we don't delete
+        del self.isHost
                 

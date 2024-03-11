@@ -50,7 +50,28 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         #Spawn Player control logic here: TODO::actually write this, or even rewrite this whole file. most of this is carryover from other project.
         self.playerMgr = playerManager(self)
         
-        ##TODO:: split off the below into a "game start" function and replace it with code that synchronises the game start once all users have completed the above logic.
+        #logic for syncing game start
+        if self.lobby.isHost:
+            self.readyTester = []
+            self.accept('ready', self.ready_recieve)
+            self.ready_recieve('host')
+        else:
+            self.accept('gameStart', self.game_start)
+            self.lobby.server.add_message("ready", (int(self.lobby.memVal),))
+        
+        
+    def ready_recieve(self, num):
+        self.readyTester.append(num)
+        if self.lobby.tracker.ready_test(self.readyTester):
+            self.ignore('ready')
+            del self.readyTester
+            self.game_start()
+    
+    def game_start(self):
+        if self.lobby.isHost:
+            self.lobby.server.add_message('gameStart')
+        else:
+            self.ignore('gameStart')
         self.playerMgr.round_start()
         
     def destroy(self):
