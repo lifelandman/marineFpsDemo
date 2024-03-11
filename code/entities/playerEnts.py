@@ -92,8 +92,8 @@ class playerEnt(npEnt):
     def add_colliders(self, trav, handler):
         trav.add_collider(self.bBox, handler)
         handler.add_collider(self.bBox, self.np)
-        trav.add_collider(self.bBox, handler)
-        handler.add_collider(self.bBox, self.np)
+        trav.add_collider(self.wBall, handler)
+        handler.add_collider(self.wBall, self.np)
         
     ##########
     #Spawning#
