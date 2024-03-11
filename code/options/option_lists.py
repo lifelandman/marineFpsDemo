@@ -4,13 +4,11 @@ keybinds = [
     
     ConfigVariableString('move-forward', 'w'),
     ConfigVariableString('move-backward', 's'),
-    ConfigVariableString('move-left', 'arrow_left'),
-    ConfigVariableString('move-right', 'arrow_right'),
-    ConfigVariableString('turn-left', 'a'),
-    ConfigVariableString('turn-right', 'd'),
+    ConfigVariableString('move-left', 'a'),
+    ConfigVariableString('move-right', 'd'),
     
     ConfigVariableString('jump', 'space'),
-    ConfigVariableString('dash', 'shift'),
+    ConfigVariableString('crouch', 'shift'),
     
     ConfigVariableString('pause', 'escape'),
 

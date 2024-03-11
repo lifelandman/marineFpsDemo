@@ -4,6 +4,8 @@ myMsg = [
     "disconnecting",
     "name request",
     "kick",#BE CAREFULL!!
+    "gameStart",
+    "expectOveride",#Hey, we've detected a potential teleport, when we report your position next, go there or else.
     
     ]
 
@@ -14,7 +16,9 @@ valueMsg = {
     "connect":("string",2),#first value is name, second value is index of player. Indicies are not numbers if local to server.
     "alias":("string", 2),#ofical name and id.
     "disconnect":("string", 1),
-    "playMap":("string", 1)
+    "playMap":("string", 1),
+    "ready":("u8int", 1),
+    "playData":("play", 1),
     }
 
     
@@ -41,28 +45,65 @@ def msgFilterValue(message):
 #And then we have dict grabberTable which we can use to assosiate valmessages with the appropriate grabber function
 #This is hacky and could probably be implemented in some other memory-nice way but this just makes the code so much cleaner.
 def gFloat64(iterator):
-    return iterator.getFloat64()
+    return iterator.get_float64()
 def gBool (iterator):
-    return iterator.getBool()
+    return iterator.get_bool()
 def gString (iterator):#oops funny name
-    return iterator.getString()
+    return iterator.get_string()
+def gu8int (iterator):
+    return iterator.get_uint8()
+def gPlay (iterator):
+    #(player._yMove, _xMove, _wantJump, _wantCrouch, _hRot, _pRot, vX,vY,vZ,h,p,is_airborne)
+    return (iterator.get_float64(),#y
+            iterator.get_float64(),#x
+            iterator.get_bool(),#jump
+            iterator.get_bool(),#crouch
+            iterator.get_float64(),#hrot
+            iterator.get_float64(),#prot
+            iterator.get_float64(),#vX
+            iterator.get_float64(),#vY
+            iterator.get_float64(),#vZ
+            iterator.get_float64(),#h
+            iterator.get_float64(),#p
+            iterator.get_bool()#is_airborne
+            )
 
 grabberTable = {
     "float64":gFloat64,
     "bool":gBool,
-    "string":gString
+    "string":gString,
+    "u8int":gu8int,
+    "play":gPlay
     }
 
 ####################Ditto of above, except for sending.
 def sFloat64(datagram, val):
-    return datagram.addFloat64(val)
+    return datagram.add_float64(val)
 def sBool (datagram, val):
-    return datagram.addBool(val)
+    return datagram.add_bool(val)
 def sString (datagram, val):#oops funny name
-    return datagram.addString(val)
+    return datagram.add_string(val)
+def su8int (datagram, val):
+    return datagram.add_uint8(val)
+def sPlay (datagram, val):
+    datagram.add_float64(val[0]),#y
+    datagram.add_float64(val[1]),#x
+    datagram.add_bool(val[2]),#jump
+    datagram.add_bool(val[3]),#crouch
+    datagram.add_float64(val[4]),#hrot
+    datagram.add_float64(val[5]),#prot
+    datagram.add_float64(val[6]),#vX
+    datagram.add_float64(val[7]),#vY
+    datagram.add_float64(val[8]),#vZ
+    datagram.add_float64(val[9]),#h
+    datagram.add_float64(val[10]),#p
+    datagram.add_bool(val[11])#is_airborne
+    
 
 setterTable = {
     "float64":sFloat64,
     "bool":sBool,
-    "string":sString
+    "string":sString,
+    "u8int":su8int,
+    "play":sPlay
     }

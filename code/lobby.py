@@ -65,7 +65,7 @@ class lobby_ui(DirectObject):
                 self.server.send_direct("alias", int(pid), (newName, pid))
                 x = []
                 players = self.tracker.get_players()
-                for name, index in players.items():
+                for name, index in players:
                     x.append(name)
                     x.append(str(index))
                 while len(x) < 8:
@@ -92,12 +92,10 @@ class lobby_ui(DirectObject):
             self.make_player_list()
         
     def introduce(self, memVal):
-        print('introduce')
         self.server.add_message("connect", (ConfigVariableString('my-name', "player").get_string_value(), memVal))
         self.acceptOnce("alias", self.accept_alias)
 
     def accept_alias(self, name, memVal):
-        print('alias')
         self.name = name
         self.memVal = memVal
         
@@ -137,7 +135,7 @@ class lobby_ui(DirectObject):
         players = self.tracker.get_players()
         if self.isHost:
             count = 1
-            for player, index in players.items():
+            for player, index in players:
                 if index == "host":
                     self.pList.append(self.player_label(player, count))
                 else:
@@ -145,7 +143,7 @@ class lobby_ui(DirectObject):
                 count +=1
         else:
             count = 1
-            for player, index in players.items():
+            for player, index in players:
                 name = player.split("<")[0]
                 self.pList.append(self.player_label(name, count))
                 count +=1

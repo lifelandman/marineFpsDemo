@@ -3,7 +3,7 @@ from direct.task import Task
 
 class entBase(DirectObject):
     
-    tasks = (#(task name string, string attribute name of task function, sort)
+    tasks = (#(task name string, string attribute name of task function, optional: sort)
         )
     
     delayTasks = (#(task name string, string attribute name of task function, delay*NOT OPTIONAL*,  sort)
@@ -44,4 +44,4 @@ class entNamable(entBase):#since a lot of things would likely need a 'name' attr
         
     def destroy(self):#kind of redundant since instance variables usually get cleaned up automatically whenever a instance falls out of all scopes,
         del self.name#but usefull for illustrating how you HAVE to call super if you don't want to manually pick and call elements from parent classes.
-        super().__init__()
+        super().destroy()

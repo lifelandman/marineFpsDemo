@@ -32,7 +32,7 @@ class clientServer(DirectObject):
         self.address = self.connection.get_address()
         
         #TASKS
-        taskMgr.add(self.reader_poll, "readerPoll")
+        taskMgr.add(self.reader_poll, "readerPoll", 1)
         taskMgr.add(self.send_messages, "sendPoll")
         taskMgr.doMethodLater(3, self.disconnect_check, "disconnectPoll")
         
@@ -48,7 +48,6 @@ class clientServer(DirectObject):
     ##RECIEVING
     def disconnect_check(self, task):
         if self.cManager.reset_connection_available():
-            print('reset connection available')
             disconnected = PointerToConnection()
             if self.cManager.get_reset_connection(disconnected):
                 messenger.send("exit_session")
@@ -89,12 +88,13 @@ class clientServer(DirectObject):
                             param.append(grabberTable[comInfo[0]](iterator))
                             count += 1
                         messenger.send(com, param)
-
+            #'''
             except:#Something is seriously wrong, no way to fix. have to shut down server.
                 self.shut_down()
                 messenger.send("serverError")
                 print("Massive server error: unindexed address")
                 return True
+            #'''    
                              
         else:
             print("data grab fail")

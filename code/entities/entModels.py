@@ -24,7 +24,7 @@ class modelEnt (npEnt):
             mnp.reparent_to(np)#We hijack the np parameter and use it as our parent
         mnp.set_pos(*pos)
         kwargs['np'] = mnp
-        super().__init__(*kwargs)#Trick npEnt into holding the root of our model
+        super().__init__(**kwargs)#Trick npEnt into holding the root of our model
         
 
 
@@ -48,7 +48,7 @@ class modelInstanceEnt (npEnt):
         mnp = self.model.instance_to(np)
         mnp.set_pos(*pos)
         self.refCount += 1
-        super().__init__(np = mnp, *kwargs)#Trick npEnt into holding the root of our model
+        super().__init__(np = mnp, **kwargs)#Trick npEnt into holding the root of our model
         
     def destroy(self):
         self.refCount -= 1
