@@ -53,7 +53,7 @@ def gString (iterator):#oops funny name
 def gu8int (iterator):
     return iterator.get_uint8()
 def gPlay (iterator):
-    #(player._yMove, _xMove, _wantJump, _wantCrouch, _hRot, _pRot, vX,vY,vZ,h,p,is_airborne)
+    #(player._yMove, _xMove, _wantJump, _wantCrouch, _hRot, _pRot, vX,vY,vZ,h,p,x,y,z,is_airborne)
     return (iterator.get_float64(),#y
             iterator.get_float64(),#x
             iterator.get_bool(),#jump
@@ -65,6 +65,9 @@ def gPlay (iterator):
             iterator.get_float64(),#vZ
             iterator.get_float64(),#h
             iterator.get_float64(),#p
+            iterator.get_float64(),#x
+            iterator.get_float64(),#y
+            iterator.get_float64(),#z
             iterator.get_bool()#is_airborne
             )
 
@@ -97,7 +100,10 @@ def sPlay (datagram, val):
     datagram.add_float64(val[8]),#vZ
     datagram.add_float64(val[9]),#h
     datagram.add_float64(val[10]),#p
-    datagram.add_bool(val[11])#is_airborne
+    datagram.add_float64(val[11]),#x
+    datagram.add_float64(val[12]),#y
+    datagram.add_float64(val[13]),#z
+    datagram.add_bool(val[14])#is_airborne
     
 
 setterTable = {

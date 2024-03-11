@@ -225,7 +225,11 @@ class playerEnt(npEnt):
     ####################        
         
     def interrogate(self):
-        return "playData{" + self.name, ((self._yMove, self._xMove, self._wantJump, self._wantCrouch, self._hRot, self._pRot, self.velocity.get_x(), self.velocity.get_y(), self.velocity.get_z(), self.np.get_h(), self._rig.get_p(), self._isAirborne),)
+        return "playData{" + self.name, ((self._yMove, self._xMove,
+                                          self._wantJump, self._wantCrouch,
+                                          self._hRot, self._pRot,
+                                          self.velocity.get_x(), self.velocity.get_y(), self.velocity.get_z(),
+                                          self.np.get_h(), self._rig.get_p(), self.np.get_x(), self.np.get_y(), self.np.get_z(), self._isAirborne),)
     
 
     def destroy(self):
@@ -261,7 +265,8 @@ class clientPlayer(playerEnt):
         self.velocity.set_z(val[8])
         self.np.set_h(val[9])
         self._rig.set_p(val[10])
-        self._isAirborne = (val[11])
+        self.np.set_pos(val[11],val[12],val[13],)
+        self._isAirborne = (val[14])
         
     def toggle_inputs(self):
         if self._inputActive:
@@ -346,7 +351,7 @@ class clientPlayer(playerEnt):
         super().destroy()
     
 
-class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, _hRot, _pRot, vX,vY,vZ,h,p,is_airborne)
+class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, _hRot, _pRot, vX,vY,vZ,h,p,x,y,z,is_airborne)
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.addTask(self.checkMove, self.name + 'check movement', sort = 10)
@@ -367,12 +372,14 @@ class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, 
             self._pRot = self.pDat[5]
             
             self.update()
-            if (self._isAirborne == self.pDat[11]) and self.velocity.almost_equal(Vec3(self.pDat[6], self.pDat[7], self.pDat[8])) and isclose(self.pDat[9], self.np.get_h()) and isclose(self.pDat[9], self._rig.get_p()):
+            if (self._isAirborne == self.pDat[14]) and self.velocity.almost_equal(Vec3(self.pDat[6], self.pDat[7], self.pDat[8])) and self.np.get_pos().almost_equal(Vec3(self.pDat[11],self.pDat[12],self.pDat[13])) and isclose(self.pDat[9], self.np.get_h()) and isclose(self.pDat[9], self._rig.get_p()):
                 self.velocity.set_x(self.pDat[6])
                 self.velocity.set_y(self.pDat[7])
                 self.velocity.set_z(self.pDat[8])
                 self.np.set_h(self.pDat[9])
                 self._rig.set_p(self.pDat[10])
+                self.np.set_pos(val[11],val[12],val[13],)
+                self._isAirborne = self.pDat[14]
             else:
                 self.over = True#Force client into accurate position
 
@@ -404,8 +411,9 @@ class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seem
             self.velocity.set_z(self.pDat[8])
             self.np.set_h(self.pDat[9])
             self._rig.set_p(self.pDat[10])
-            self._isAirborne = (self.pDat[11])
+            self.np.set_pos(self.pDat[11],self.pDat[12],self.pDat[13])
+            self._isAirborne = (self.pDat[14])
 
             self.pDat = None
-        self.update()
+        else: self.update()
         return Task.cont
