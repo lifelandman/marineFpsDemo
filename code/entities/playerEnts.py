@@ -224,12 +224,12 @@ class playerEnt(npEnt):
     #Management Methods#
     ####################        
         
-    def interrogate(self):
-        return "playData{" + self.name, ((self._yMove, self._xMove,
+    def interrogate(self, server):
+        server.add_message("playData{" + self.name, ((self._yMove, self._xMove,
                                           self._wantJump, self._wantCrouch,
                                           self._hRot, self._pRot,
                                           self.velocity.get_x(), self.velocity.get_y(), self.velocity.get_z(),
-                                          self.np.get_h(), self._rig.get_p(), self.np.get_x(), self.np.get_y(), self.np.get_z(), self._isAirborne),)
+                                          self.np.get_h(), self._rig.get_p(), self.np.get_x(), self.np.get_y(), self.np.get_z(), self._isAirborne),))
     
 
     def destroy(self):

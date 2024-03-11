@@ -68,15 +68,16 @@ class playerManager(DirectObject):
         stdPoint.remove_node()
         
     def distribute_players(self, task):
+        server = self.gameObj.lobby.server
         if self.isHost:
             for player in self.playerEnts:
                 if player.over:
                     if not self.gameObj.lobby.server.send_direct("expectOveride", self.gameObj.lobby.tracker.get_id(player.name)):
                         continue#something went wrong here. Potentially flag playerEnt rebuild
                     player.over = False
-                self.gameObj.lobby.server.add_message(*player.interrogate())
+                player.interrogate(server)
         else:
-            self.gameObj.lobby.server.add_message(*self.clientEnt.interrogate())
+            self.clientEnt.interrogate(server)
         return Task.cont
             
     def clear_players(self):
