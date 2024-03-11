@@ -145,7 +145,7 @@ class playerEnt(npEnt):
         if self._isAirborne:#changing z velocity is a bad idea if we're touching the ground.
             self.velocity.add_z(-((8*scalar)/2))#Subtract vertical velocity for half a frame. #TODO:: if you want weight modifiers, add them here.#8 is gravity
         elif self._wantJump:
-            self.velocity.add_z(sqrt(5)/2)
+            self.velocity.add_z(sqrt(3)/2)
             
         speedLimit = 20#maximum horizontal speed
         walkAccel = 2#acceleration while walking per second
@@ -158,7 +158,10 @@ class playerEnt(npEnt):
         #Y velosity calculations
         if self._yMove != 0:
             if not self._isAirborne and exceedControlSpeed:
-                self.velocity.add_y((self._yMove*walkAccel*scalar)/2)
+                if abs(self.velocity.get_y() + self._yMove) < abs(self.velocity.get_y()):
+                    self.velocity.add_y(copysign(min(abs(self.velocity.get_y()), 10), self._yMove)/2)#instantly reverse momentum
+                else:
+                    self.velocity.add_y((self._yMove*walkAccel*scalar)/2)
             elif self._isAirborne:#note we don't cap velocity while in air
                 self.velocity.add_y((self._yMove*airAccel*scalar)/2)
         if abs(self.velocity.get_y()) > 20:
@@ -174,7 +177,10 @@ class playerEnt(npEnt):
         #X velosity calculations
         if self._xMove != 0:
             if not self._isAirborne and exceedControlSpeed:
-                self.velocity.add_x((self._xMove*walkAccel*scalar)/2)
+                if abs(self.velocity.get_x() + self._xMove) < abs(self.velocity.get_x()):
+                    self.velocity.add_x(copysign(min(abs(self.velocity.get_x()), 10), self._xMove)/2)
+                else:
+                    self.velocity.add_x((self._xMove*walkAccel*scalar)/2)
             elif self._isAirborne:#note we don't cap velocity while in air
                 self.velocity.add_x((self._xMove*airAccel*scalar)/2)
         if abs(self.velocity.get_x()) > 20:
