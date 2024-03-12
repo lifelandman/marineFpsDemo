@@ -215,9 +215,13 @@ class playerEnt(npEnt):
     
     def inCrouchTask(self, taskobj):
         time = taskobj.time
-        if self._isAirborne or time >= 0.35:
+        if self._isAirborne or self._isCrouched or time >= 0.35:
             self._inCrouch = False
             self.crouch()
+            return Task.done
+        elif not self._wantCrouch:
+            self.uncrouch()
+            self._inCrouch = False
             return Task.done
         self._rig.set_z(-0.1 + (1- (time/0.35)))
         return Task.cont
@@ -279,7 +283,8 @@ class playerEnt(npEnt):
                                           self._wantJump, self._wantCrouch,
                                           self._hRot, self._pRot,
                                           self.velocity.get_x(), self.velocity.get_y(), self.velocity.get_z(),
-                                          self.np.get_h(), self._rig.get_p(), self.np.get_x(), self.np.get_y(), self.np.get_z(), self._isAirborne),))
+                                          self.np.get_h(), self._rig.get_p(), self.np.get_x(), self.np.get_y(), self.np.get_z(),
+                                          self._isAirborne, self._isCrouched),))
     
 
     def destroy(self):
@@ -310,7 +315,8 @@ class clientPlayer(playerEnt):
         if not isclose(self._rig.get_h(), val[9], rel_tol = 1) :self.np.set_h(val[9])
         if not isclose(self._rig.get_p(), val[10], rel_tol = 1) :self._rig.set_p(val[10])
         self.np.set_pos(val[11],val[12],val[13],)
-        self._isAirborne = (val[14])
+        self._isAirborne = val[14]
+        self._isCrouched = val[15]
         
     def toggle_inputs(self):
         if self._inputActive:
@@ -416,7 +422,7 @@ class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, 
             self._pRot = self.pDat[5]
             
             self.update()
-            if (self._isAirborne == self.pDat[14]) and self.np.get_pos().almost_equal(Point3(self.pDat[11],self.pDat[12],self.pDat[13]), 0.05) and isclose(self.pDat[9], self.np.get_h(), rel_tol = 1) and isclose(self.pDat[10], self._rig.get_p(), rel_tol = 1):
+            if (self._isAirborne == self.pDat[14]) and (self._isCrouched == self.pDat[15]) and self.np.get_pos().almost_equal(Point3(self.pDat[11],self.pDat[12],self.pDat[13]), 0.05) and isclose(self.pDat[9], self.np.get_h(), rel_tol = 1) and isclose(self.pDat[10], self._rig.get_p(), rel_tol = 1):
                 if self.velocity.almost_equal(Point3(self.pDat[6], self.pDat[7], self.pDat[8]), 0.05):
                     self.velocity.set_x(self.pDat[6])
                     self.velocity.set_y(self.pDat[7])
@@ -425,6 +431,11 @@ class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, 
                 self._rig.set_p(self.pDat[10])
                 self.np.set_pos(self.pDat[11],self.pDat[12],self.pDat[13],)
                 self._isAirborne = self.pDat[14]
+                if self._isCrouched != self.pDat[15]:
+                    if self._isCrouched:
+                        self.uncrouch()
+                    else:
+                        self.crouch
             else:
                 self.over = True#Force client into accurate position
 
@@ -468,6 +479,11 @@ class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seem
             self._rig.set_p(self.pDat[10])
             self.np.set_pos(self.pDat[11],self.pDat[12],self.pDat[13])
             self._isAirborne = (self.pDat[14])
+            if self._isCrouched != self.pDat[15]:
+                if self._isCrouched:
+                    self.uncrouch()
+                else:
+                    self.crouch
 
             self.pDat = None
         else: self.update()
