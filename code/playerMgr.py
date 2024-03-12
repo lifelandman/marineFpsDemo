@@ -44,7 +44,7 @@ class playerManager(DirectObject):
             
     def round_start(self):
         self.spawn_wave()
-        self.addTask(self.distribute_players, "distribute players", 100)#his should be THE last task.
+        self.addTask(self.distribute_players, "distribute players", 100)#his should be right before sending, THE last task.
             
     def spawn_wave(self):
         spawnPoints = self.gameObj.world.find_all_matches('**/=spawnPoint')

@@ -30,7 +30,7 @@ class hostServer():
         #TASKS
         taskMgr.add(self.listener_poll, "listenerPoll")
         taskMgr.add(self.reader_poll, "readerPoll", 1)
-        taskMgr.add(self.send_messages, "sendPoll")
+        taskMgr.add(self.send_messages, "sendPoll", 101)
 
         taskMgr.doMethodLater(3, self.disconnect_check, "disconnectPoll")
         

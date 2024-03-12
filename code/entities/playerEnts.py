@@ -39,7 +39,8 @@ class playerEnt(npEnt):
 
         #Create bounding box
         cNode = CollisionNode(self.name + '_bounding_box')
-        cNode.add_solid(CollisionBox(Point3(0,0,0), 1,1,2))
+        self.bBSolids = (CollisionBox(Point3(0,0,0), 1,1,2), CollisionBox(Point3(0,0,1), 1,1,1))#Diffrent collisionSolids for cNode, 0=normal, 1=crouch, 2=fastSwm
+        cNode.add_solid(self.bBSolids[0])
         cNode.set_from_collide_mask(BitMask32(0b10110))#TODO:: change this later to have team collision setting
         self.bBox = self.np.attach_new_node(cNode)
         del cNode
@@ -70,7 +71,7 @@ class playerEnt(npEnt):
         ################Create all instance variables##############
         
         #Administrative/anti-cheat
-        self.teleportOk = False#Set this to true if and whenever velosity's big enough or we're teleporting somewhere. If not this and this player moved too far, it's possible that client is trying to lie about present location.
+        #self.teleportOk = False#Set this to true if and whenever velosity's big enough or we're teleporting somewhere. If not this and this player moved too far, it's possible that client is trying to lie about present location.
         
         #Movement
         self._xMove = 0.0 #float for relatively left/right movement.
@@ -88,6 +89,11 @@ class playerEnt(npEnt):
         
         self.wBall.show()
         self.bBox.show()
+        
+        #bBox
+        self._inCrouch = False#Are we doing the crouching animation?
+        self._isCrouched = False
+        self._swmFst = False
     
     def add_colliders(self, trav, handler):
         trav.add_collider(self.bBox, handler)
@@ -130,6 +136,16 @@ class playerEnt(npEnt):
         
         if abs(self._rig.get_p()) < 90:
             self._rig.set_p(self._rig, self._pRot)
+            
+        #Crouch
+        if self._wantCrouch and not (self._isCrouched or self._inCrouch):
+            if self._isAirborne:
+                self.crouch()
+            else:
+                self.addTask(self.inCrouchTask, "crouchTask")
+                self._inCrouch = True
+        elif self._isCrouched and not self._wantCrouch:
+            self.uncrouch()
         ##########Part 3: calculate the second-half-frame velocity change
         avgRate = globalClock.get_average_frame_rate()#this is a prediction for how long the next frame will be
         self.velocity_half_update(1/avgRate)#divide 1 by avgRate to get estimated next frame time
@@ -192,6 +208,34 @@ class playerEnt(npEnt):
                 self.velocity.add_x(-copysign(friction, self.velocity.get_x())*scalar / 2)
             elif not self._xMove and self.velocity.get_x() != 0:
                 self.velocity.set_x(0)
+                
+    ##############
+    #BBox changes#
+    ##############
+    
+    def inCrouchTask(self, taskobj):
+        time = taskobj.time
+        if self._isAirborne or time >= 0.4:
+            self._inCrouch = False
+            self.crouch()
+            return Task.done
+        self._rig.set_z(-0.1 + (1- (time/0.4)))
+        return Task.cont
+        
+    
+    def crouch(self):
+        self.bBox.node().set_solid(0,self.bBSolids[1])
+        self._rig.set_z(-0.1)
+        if self._isAirborne:
+            self.np.set_z(self.np, 1)
+        self._isCrouched = True
+            
+    def uncrouch(self):
+        self.bBox.node().set_solid(0,self.bBSolids[0])
+        self._rig.set_z(0.9)
+        if self._isAirborne:
+            self.np.set_z(self.np, -1)
+        self._isCrouched = False
             
     ########
     #Events#
@@ -260,17 +304,11 @@ class clientPlayer(playerEnt):
         self.acceptOnce('playData{' + self.name, self.storeProps)
         
     def storeProps(self, val):
-        self._yMove = val[0]
-        self._xMove = val[1]
-        self._wantJump = val[2]
-        self._wantCrouch = val[3]
-        self._hRot = val[4]
-        self._pRot = val[5]
         self.velocity.set_x(val[6])
         self.velocity.set_y(val[7])
         self.velocity.set_z(val[8])
-        self.np.set_h(val[9])
-        self._rig.set_p(val[10])
+        if not isclose(self._rig.get_h(), val[9], rel_tol = 1) :self.np.set_h(val[9])
+        if not isclose(self._rig.get_p(), val[10], rel_tol = 1) :self._rig.set_p(val[10])
         self.np.set_pos(val[11],val[12],val[13],)
         self._isAirborne = (val[14])
         
@@ -378,13 +416,14 @@ class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, 
             self._pRot = self.pDat[5]
             
             self.update()
-            if (self._isAirborne == self.pDat[14]) and self.velocity.almost_equal(Vec3(self.pDat[6], self.pDat[7], self.pDat[8])) and self.np.get_pos().almost_equal(Vec3(self.pDat[11],self.pDat[12],self.pDat[13])) and isclose(self.pDat[9], self.np.get_h()) and isclose(self.pDat[9], self._rig.get_p()):
-                self.velocity.set_x(self.pDat[6])
-                self.velocity.set_y(self.pDat[7])
-                self.velocity.set_z(self.pDat[8])
+            if (self._isAirborne == self.pDat[14]) and self.np.get_pos().almost_equal(Point3(self.pDat[11],self.pDat[12],self.pDat[13]), 0.05) and isclose(self.pDat[9], self.np.get_h(), rel_tol = 1) and isclose(self.pDat[10], self._rig.get_p(), rel_tol = 1):
+                if self.velocity.almost_equal(Point3(self.pDat[6], self.pDat[7], self.pDat[8]), 0.05):
+                    self.velocity.set_x(self.pDat[6])
+                    self.velocity.set_y(self.pDat[7])
+                    self.velocity.set_z(self.pDat[8])
                 self.np.set_h(self.pDat[9])
                 self._rig.set_p(self.pDat[10])
-                self.np.set_pos(val[11],val[12],val[13],)
+                self.np.set_pos(self.pDat[11],self.pDat[12],self.pDat[13],)
                 self._isAirborne = self.pDat[14]
             else:
                 self.over = True#Force client into accurate position
@@ -393,6 +432,16 @@ class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, 
         else: self.update()
         return Task.cont
 
+    '''#Function for testing causes of networking bumpiness
+    def checkOver(self):
+        print(self._isAirborne == self.pDat[14])
+        print(self.np.get_pos().almost_equal(Point3(self.pDat[11],self.pDat[12],self.pDat[13])), 0.05)
+        print(isclose(self.pDat[9], self.np.get_h(), rel_tol = 1))
+        print(isclose(self.pDat[10], self._rig.get_p(), rel_tol = 1))
+        print(self._pRot)
+        print('next Frame')
+    '''
+    
 class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seems legit nor sends out instructions.
     over = False#This might not be nessisary???
     def __init__(self, **kwargs):
