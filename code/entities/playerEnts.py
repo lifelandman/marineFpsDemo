@@ -39,7 +39,7 @@ class playerEnt(npEnt):
 
         #Create bounding box
         cNode = CollisionNode(self.name + '_bounding_box')
-        self.bBSolids = (CollisionBox(Point3(0,0,0), 1,1,2), CollisionBox(Point3(0,0,1), 1,1,1))#Diffrent collisionSolids for cNode, 0=normal, 1=crouch, 2=fastSwm
+        self.bBSolids = (CollisionBox(Point3(0,0,0), 1,1,2), CollisionBox(Point3(0,0,-1), 1,1,1))#Diffrent collisionSolids for cNode, 0=normal, 1=crouch, 2=fastSwm
         cNode.add_solid(self.bBSolids[0])
         cNode.set_from_collide_mask(BitMask32(0b10110))#TODO:: change this later to have team collision setting
         self.bBox = self.np.attach_new_node(cNode)
@@ -215,11 +215,11 @@ class playerEnt(npEnt):
     
     def inCrouchTask(self, taskobj):
         time = taskobj.time
-        if self._isAirborne or time >= 0.4:
+        if self._isAirborne or time >= 0.35:
             self._inCrouch = False
             self.crouch()
             return Task.done
-        self._rig.set_z(-0.1 + (1- (time/0.4)))
+        self._rig.set_z(-0.1 + (1- (time/0.35)))
         return Task.cont
         
     
