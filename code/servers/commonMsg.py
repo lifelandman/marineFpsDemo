@@ -68,7 +68,8 @@ def gPlay (iterator):
             iterator.get_float64(),#x
             iterator.get_float64(),#y
             iterator.get_float64(),#z
-            iterator.get_bool()#is_airborne
+            iterator.get_bool(),#is_airborne
+            iterator.get_bool(),#_isCrouching
             )
 
 grabberTable = {
@@ -104,6 +105,7 @@ def sPlay (datagram, val):
     datagram.add_float64(val[12]),#y
     datagram.add_float64(val[13]),#z
     datagram.add_bool(val[14])#is_airborne
+    datagram.add_bool(val[15])#_isCrouching
     
 
 setterTable = {
