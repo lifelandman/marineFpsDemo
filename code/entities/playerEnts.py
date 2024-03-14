@@ -134,7 +134,7 @@ class playerEnt(npEnt):
         turn.set_from_axis_angle(-self._hRot, self.upVec)
         self.velocity = Vec3(turn.xform(self.velocity))
         
-        if abs(self._rig.get_p()) < 90:
+        if abs(self._rig.get_p() + self._pRot) < 85:
             self._rig.set_p(self._rig, self._pRot)
             
         #Crouch
