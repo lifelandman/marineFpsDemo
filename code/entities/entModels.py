@@ -67,7 +67,6 @@ class spinningModel(modelInstanceEnt, funcSpin):
 ##BIIG STUFF. BIG BIG BIG!!!
 
 from panda3d.core import LoaderOptions, Character, PartSubset, auto_bind, AnimControlCollection
-from direct.directnotify.DirectNotify import DirectNotify
 '''
 Okay, here's a refrence of stuff:
 Character: the node that holds the geometry, and updates the animation
@@ -75,22 +74,24 @@ PartSubset: we can use this to define part of the character we want to control i
 AnimControl: The class that controlls the animation.
 auto_bind: creates AnimControls for all parts for all visible animations inside the egg file
 '''
-class playerAnimModBase(npEnt):
+class playerMdlBase(npEnt):
     modelLoadOps = LoaderOptions(LoaderOptions.LF_search | LoaderOptions.LF_report_errors | LoaderOptions.LF_convert_skeleton)
     
     parts = {}#partname: ((include part names), (exclude part names))
     
+    blendMode = 2#BT_normalized_linear
+    
     npOursOverrideable = True
     
     modelPath = 'player1'
-    
-    notify = DirectNotify.newCategory("anim_warning")
     
     def __init__(self, np, pos = (0,0,0), **kwargs):
         mnp = loader.loadModel(self.modelPath, self.modelLoadOps)
         if np != None:
             mnp.reparent_to(np)#We hijack the np parameter and use it as our parent
         self.character = mnp.find("**/+Character")
+        self.character.set_blend_type(self.blendMode)
+        self.character.set_frame_blend_flag(True)
         mnp.set_pos(*pos)
         kwargs['np'] = mnp
         super().__init__(**kwargs)#Trick npEnt into holding the root of our model
@@ -100,8 +101,8 @@ class playerAnimModBase(npEnt):
         auto_bind(self.character, self.controls["modelRoot"])
         
 
-        if len(self.parts) <= 1:
-            bundle = self.character.get_bundle(0)
+        if len(self.parts) <= 1:#Are there subparts? if so, we need to make controls for those.
+            bundle = self.character.node().get_bundle(0)
             for part in self.parts.keys():
                 partCont = AnimControlCollection()
                 for anim in self.mnp.find("**/+AnimBundleNode"):
@@ -112,3 +113,45 @@ class playerAnimModBase(npEnt):
                         sPart.add_exclude_joint(exclude)
                     partCont.store_anim(bundle.bind_anim(anim.get_bundle(), 0x01 | 0x02, sPart), anim.get_bundle().get_name())
                 self.controls[part] = partCont#Store the new animControlCollection under the name of the part
+                
+    def play(self, name:str, part:str = "modelRoot", blend:float = 1):
+        control = self.controls[part].find_anim(name)
+        if not control.is_playing():
+            control.play()
+            self.character.set_control_effect(control, blend)
+            return True
+        elif blend != self.character.get_control_effect(control):
+            self.character.set_control_effect(control, blend)
+            return True
+        else: return False
+    
+    def loop(self, name:str, part:str = "modelRoot", blend:float = 1):
+        control = self.controls[part].find_anim(name)
+        if not control.is_playing():
+            control.loop(True)
+            self.character.set_control_effect(control, blend)
+            return True
+        elif blend != self.character.get_control_effect(control):
+            self.character.set_control_effect(control, blend)
+            return True
+        else: return False
+    
+    def stop(self, name:str, part:str = "modelRoot"):
+        control = self.controls[part].find_anim(name)
+        if control.is_playing():
+            control.stop()
+            self.character.set_control_effect(control, 1)
+            return True
+        else: return False
+    
+    def stop_all(self):
+        for animConCol in self.controls.items():
+            animConCol.stop_all()
+    
+
+    def destroy(self):
+        for cont in self.controls.items():
+            cont.stop_all()
+        del self.controls
+        self.character.remove_node()
+        super().destroy()
