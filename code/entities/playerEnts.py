@@ -156,8 +156,9 @@ class playerEnt(npEnt):
         
         
         #animations
-        self.model.set_look(self._rig.get_p())
+        #self.model.set_look(self._rig.get_p())
         self.model.walk(self._xMove, self._yMove)
+        
         ##########Part 3: calculate the second-half-frame velocity change
         avgRate = globalClock.get_average_frame_rate()#this is a prediction for how long the next frame will be
         self.velocity_half_update(1/avgRate)#divide 1 by avgRate to get estimated next frame time
@@ -484,6 +485,7 @@ class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seem
         if self.pDat:
             self._yMove = self.pDat[0]
             self._xMove = self.pDat[1]
+            self.model.walk(self._xMove, self._yMove)
             self._wantJump = self.pDat[2]
             self._wantCrouch = self.pDat[3]
             self._hRot = self.pDat[4]

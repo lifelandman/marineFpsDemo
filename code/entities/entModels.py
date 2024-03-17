@@ -93,14 +93,15 @@ class playerMdlBase(npEnt):
         self.bundle = self.character.node().get_bundle(0)
         self.bundle.set_blend_type(self.blendMode)
         self.bundle.set_anim_blend_flag(True)
-        self.bundle.set_frame_blend_flag(True)
+        #self.bundle.set_frame_blend_flag(True)
         mnp.set_pos(*pos)
         kwargs['np'] = mnp
         super().__init__(**kwargs)#Trick npEnt into holding the root of our model
         
         #Character stuff
         self.controls = {"modelRoot" : AnimControlCollection()}
-        auto_bind(self.character.node(), self.controls["modelRoot"])
+        for anim in self.np.find_all_matches("**/+AnimBundleNode"):
+            self.controls["modelRoot"].store_anim(self.bundle.bind_anim(anim.node().get_bundle(), 0x01 | 0x02 | 0x04), anim.node().get_bundle().get_name())
         
 
         if len(self.parts) >= 1:#Are there subparts? if so, we need to make controls for those.
@@ -114,37 +115,44 @@ class playerMdlBase(npEnt):
                         sPart.add_exclude_joint(exclude)
                     partCont.store_anim(self.bundle.bind_anim(anim.node().get_bundle(), 0x01 | 0x02 | 0x04, sPart), anim.node().get_bundle().get_name())
                 self.controls[part] = partCont#Store the new animControlCollection under the name of the part
-                
 
 
     def play(self, name:str, part:str = "modelRoot", blend:float = 1):
         control = self.controls[part].find_anim(name)
         if not control.is_playing():
             control.play()
-            self.bundle.set_control_effect(control, blend)
+            self.check_blend(control, blend)
             return True
-        elif blend != self.bundle.get_control_effect(control):
-            self.bundle.set_control_effect(control, blend)
-            return True
-        else: return False
+        elif not self.check_blend(control, blend):
+            return False
     
     def loop(self, name:str, part:str = "modelRoot", blend:float = 1):
         control = self.controls[part].find_anim(name)
         if not control.is_playing():
-            control.loop(True)
-            self.bundle.set_control_effect(control, blend)
+            if control.get_num_frames() > 1:
+                control.loop(True)
+            else:
+                control.loop(True, 0, 1)#Stupid fucking hack to get around loop passing one-frame animations to pose()
+            self.check_blend(control, blend)
             return True
-        elif blend != self.bundle.get_control_effect(control):
-            self.bundle.set_control_effect(control, blend)
-            return True
-        else: return False
+        elif not self.check_blend(control, blend):
+            return False
     
     def stop(self, name:str, part:str = "modelRoot"):
         control = self.controls[part].find_anim(name)
         if control.is_playing():
             control.stop()
+            self.bundle.set_control_effect(control, 0)
             return True
         else: return False
+        
+    def pose(self, name:str, part:str = "modelRoot", blend:float = 1.0, frame:float = 0.0):
+        control = self.controls[part].find_anim(name)
+        if control.is_playing():
+            control.stop()
+        control.pose(frame)
+        self.check_blend(control, blend)
+        return True
     
     def stop_all(self):
         for animConCol in self.controls.items():
@@ -152,8 +160,13 @@ class playerMdlBase(npEnt):
             
     def change_blend(self, name:str, part:str, blend:float):
         control = self.controls[part].find_anim(name)
+        return self.check_blend(control, blend)
+            
+    def check_blend(self, control, blend):
         if blend != self.bundle.get_control_effect(control):
             self.bundle.set_control_effect(control, blend)
+            return True
+        return False
     
 
     def destroy(self):
