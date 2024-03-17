@@ -11,7 +11,6 @@ class playerMdl(playerMdlBase):
         #self.loop('backRun', 'legs')
         
     def set_look(self, p: float):
-        return
         if p > 0:
             scale = p/85
             self.change_blend("idle", "torso", 1 - scale)
@@ -24,33 +23,35 @@ class playerMdl(playerMdlBase):
         idleTest = 0
         scale = abs(x) + abs(y)
         
-        if x == 120:
+        if x != 0:
             if x > 0:
                 if self.loop("strideR", "legs", 1.0):
                     self.stop("strideL", "legs")
             else:#No need to run another check, we know this is the case
                 if self.loop("strideL", "legs", 1.0):
                     self.stop("strideR", "legs")
-                    '''
+                    
         else:
             if not self.stop("strideR", "legs"):
                 self.stop("strideL", "legs")
             idleTest += 1
-            '''
+
         
         if y != 0:
             if y > 0:
-                self.loop("run", "legs", 1.0)
-                self.stop("backRun", "legs")
+                if self.loop("run", "legs", 1.0):
+                    self.stop("backRun", "legs")
             else:#No need to run another check, we know this is the case
-                self.loop("backRun", "legs", 1.0)
-                self.stop("run", "legs")
-        '''
+                if self.loop("backRun", "legs", 1.0):
+                    self.stop("run", "legs")
+
         else:
             if not self.stop("run", "legs"):
                 self.stop("backRun", "legs")
             idleTest += 1
             
-        '''
+
         if idleTest >= 2:
-            self.pose("idle", "legs")
+            self.loop("idle", "legs")
+        else:
+            self.stop('idle', 'legs')

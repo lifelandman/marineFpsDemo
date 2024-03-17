@@ -156,7 +156,7 @@ class playerEnt(npEnt):
         
         
         #animations
-        #self.model.set_look(self._rig.get_p())
+        self.model.set_look(self._rig.get_p())
         self.model.walk(self._xMove, self._yMove)
         
         ##########Part 3: calculate the second-half-frame velocity change
