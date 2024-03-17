@@ -79,7 +79,7 @@ class playerMdlBase(npEnt):
     
     parts = {}#partname: ((include part names), (exclude part names))
     
-    blendMode = 2#BT_normalized_linear
+    blendMode = 1#BT_normalized_linear
     
     npOursOverrideable = True
     
@@ -90,38 +90,41 @@ class playerMdlBase(npEnt):
         if np != None:
             mnp.reparent_to(np)#We hijack the np parameter and use it as our parent
         self.character = mnp.find("**/+Character")
-        self.character.set_blend_type(self.blendMode)
-        self.character.set_frame_blend_flag(True)
+        self.bundle = self.character.node().get_bundle(0)
+        self.bundle.set_blend_type(self.blendMode)
+        self.bundle.set_anim_blend_flag(True)
+        self.bundle.set_frame_blend_flag(True)
         mnp.set_pos(*pos)
         kwargs['np'] = mnp
         super().__init__(**kwargs)#Trick npEnt into holding the root of our model
         
         #Character stuff
         self.controls = {"modelRoot" : AnimControlCollection()}
-        auto_bind(self.character, self.controls["modelRoot"])
+        auto_bind(self.character.node(), self.controls["modelRoot"])
         
 
-        if len(self.parts) <= 1:#Are there subparts? if so, we need to make controls for those.
-            bundle = self.character.node().get_bundle(0)
+        if len(self.parts) >= 1:#Are there subparts? if so, we need to make controls for those.
             for part in self.parts.keys():
                 partCont = AnimControlCollection()
-                for anim in self.mnp.find("**/+AnimBundleNode"):
+                for anim in self.np.find_all_matches("**/+AnimBundleNode"):
                     sPart = PartSubset()
                     for include in self.parts[part][0]:
                         sPart.add_include_joint(include)
                     for exclude in self.parts[part][1]:
                         sPart.add_exclude_joint(exclude)
-                    partCont.store_anim(bundle.bind_anim(anim.get_bundle(), 0x01 | 0x02, sPart), anim.get_bundle().get_name())
+                    partCont.store_anim(self.bundle.bind_anim(anim.node().get_bundle(), 0x01 | 0x02 | 0x04, sPart), anim.node().get_bundle().get_name())
                 self.controls[part] = partCont#Store the new animControlCollection under the name of the part
                 
+
+
     def play(self, name:str, part:str = "modelRoot", blend:float = 1):
         control = self.controls[part].find_anim(name)
         if not control.is_playing():
             control.play()
-            self.character.set_control_effect(control, blend)
+            self.bundle.set_control_effect(control, blend)
             return True
-        elif blend != self.character.get_control_effect(control):
-            self.character.set_control_effect(control, blend)
+        elif blend != self.bundle.get_control_effect(control):
+            self.bundle.set_control_effect(control, blend)
             return True
         else: return False
     
@@ -129,10 +132,10 @@ class playerMdlBase(npEnt):
         control = self.controls[part].find_anim(name)
         if not control.is_playing():
             control.loop(True)
-            self.character.set_control_effect(control, blend)
+            self.bundle.set_control_effect(control, blend)
             return True
-        elif blend != self.character.get_control_effect(control):
-            self.character.set_control_effect(control, blend)
+        elif blend != self.bundle.get_control_effect(control):
+            self.bundle.set_control_effect(control, blend)
             return True
         else: return False
     
@@ -140,13 +143,17 @@ class playerMdlBase(npEnt):
         control = self.controls[part].find_anim(name)
         if control.is_playing():
             control.stop()
-            self.character.set_control_effect(control, 1)
             return True
         else: return False
     
     def stop_all(self):
         for animConCol in self.controls.items():
             animConCol.stop_all()
+            
+    def change_blend(self, name:str, part:str, blend:float):
+        control = self.controls[part].find_anim(name)
+        if blend != self.bundle.get_control_effect(control):
+            self.bundle.set_control_effect(control, blend)
     
 
     def destroy(self):

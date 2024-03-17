@@ -20,6 +20,7 @@ from direct.task import Task
 from math import copysign, sqrt, isclose
 ###ours:
 from .npEnt import npEnt
+from .playerModel import playerMdl
 
 class playerEnt(npEnt):
     
@@ -43,6 +44,7 @@ class playerEnt(npEnt):
         cNode.add_solid(self.bBSolids[0])
         cNode.set_from_collide_mask(BitMask32(0b10110))#TODO:: change this later to have team collision setting
         self.bBox = self.np.attach_new_node(cNode)
+        self.bBox.set_tag('bBox', 't')
         del cNode
         
         #Create water ball
@@ -56,6 +58,9 @@ class playerEnt(npEnt):
         self.wBall.set_collide_mask(BitMask32(0b00000))#No into collisions
         del cNode
         ##TODO::: assign bitmasks to above collisionNodes
+        #Create Model
+        self.model = playerMdl(np = self.np, pos = (0,0,-2))
+        self.model.np.set_h(180)#I'm doing some alterations here because I'm testing with a model not made for this project
         #Create bullet LensNode.
         '''
         Panda3d let's you extrude vectors from a lens based on coordinates. we can use this to calculate bullet raycasting vectors. 
@@ -63,7 +68,9 @@ class playerEnt(npEnt):
         self._rig = NodePath(self.name + "_rig")#this is the axis of pitch rotation for both the raycast LensNode and the camera. We don't just parent the camera to the LensNode because we might want an offset for the bullet origin.
         self._rig.reparent_to(self.np)
         self._rig.set_z(0.9)
-        loader.loadModel('jack').reparent_to(self._rig)
+        m = loader.loadModel('jack')
+        m.reparent_to(self._rig)
+        m.set_scale(0.5)
 
         self._bulletNode = LensNode(self.name + "_bulletLens", PerspectiveLens())#Weapons will modify these properties when they're set active.
         self._bulletLens = self._bulletNode.get_lens()
@@ -126,18 +133,18 @@ class playerEnt(npEnt):
         self.velocity_half_update(deltaTime)
         ##########Part 2: Perform Movement calculations
         self.np.set_pos(self.np, self.velocity)
-       
-        #Calculate rotation
+        
+        ##Calculate rotation
         self.np.set_h(self.np, self._hRot)#TODO:: This is insecure against aimhacking.
         #Rotate velocity
         turn = Quat()
         turn.set_from_axis_angle(-self._hRot, self.upVec)
         self.velocity = Vec3(turn.xform(self.velocity))
-        
-        if abs(self._rig.get_p() + self._pRot) < 85:
+        #Calculate pitch
+        if (self._pRot != 0) and (abs(self._rig.get_p() + self._pRot) <= 85):
             self._rig.set_p(self._rig, self._pRot)
             
-        #Crouch
+        ##Crouch
         if self._wantCrouch and not (self._isCrouched or self._inCrouch):
             if self._isAirborne:
                 self.crouch()
@@ -146,6 +153,11 @@ class playerEnt(npEnt):
                 self._inCrouch = True
         elif self._isCrouched and not self._wantCrouch:
             self.uncrouch()
+        
+        
+        #animations
+        self.model.set_look(self._rig.get_p())
+        self.model.walk(self._xMove, self._yMove)
         ##########Part 3: calculate the second-half-frame velocity change
         avgRate = globalClock.get_average_frame_rate()#this is a prediction for how long the next frame will be
         self.velocity_half_update(1/avgRate)#divide 1 by avgRate to get estimated next frame time
@@ -305,6 +317,9 @@ class clientPlayer(playerEnt):
         self.accept(self.key_pause, self.toggle_inputs)#GRahhh! should player classes even be entities?
         self.accept("expectOveride", self.oRTrig)
         
+        #unique graphical stuff
+        self.model.np.hide()
+        
     def oRTrig(self):
         self.acceptOnce('playData{' + self.name, self.storeProps)
         
@@ -429,6 +444,7 @@ class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, 
                     self.velocity.set_z(self.pDat[8])
                 self.np.set_h(self.pDat[9])
                 self._rig.set_p(self.pDat[10])
+                self.model.set_look(self._rig.get_p())
                 self.np.set_pos(self.pDat[11],self.pDat[12],self.pDat[13],)
                 self._isAirborne = self.pDat[14]
                 if self._isCrouched != self.pDat[15]:
@@ -477,6 +493,7 @@ class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seem
             self.velocity.set_z(self.pDat[8])
             self.np.set_h(self.pDat[9])
             self._rig.set_p(self.pDat[10])
+            self.model.set_look(self._rig.get_p())
             self.np.set_pos(self.pDat[11],self.pDat[12],self.pDat[13])
             self._isAirborne = (self.pDat[14])
             if self._isCrouched != self.pDat[15]:
@@ -486,5 +503,5 @@ class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seem
                     self.crouch
 
             self.pDat = None
-        else: self.update()
+        else:self.update()
         return Task.cont
