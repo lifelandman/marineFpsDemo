@@ -143,7 +143,7 @@ class playerMdlBase(npEnt):
     
     def stop(self, name:str, part:str = "modelRoot"):
         control = self.controls[part].find_anim(name)
-        if control.is_playing():
+        if control.is_playing() or control.get_num_frames() == 1:
             control.stop()
             self.bundle.set_control_effect(control, 0)
             return True
@@ -170,6 +170,10 @@ class playerMdlBase(npEnt):
             self.bundle.set_control_effect(control, blend)
             return True
         return False
+    
+    def get_frame(self, name:str, part:str):
+        control = self.controls[part].find_anim(name)
+        return control.get_frame()
     
 
     def destroy(self):
