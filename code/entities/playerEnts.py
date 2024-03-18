@@ -95,7 +95,7 @@ class playerEnt(npEnt):
         self._isAirborne = False
         
         self.wBall.show()
-        self.bBox.show()
+        #self.bBox.show()
         
         #bBox
         self._inCrouch = False#Are we doing the crouching animation?
@@ -486,16 +486,21 @@ class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seem
             self._yMove = self.pDat[0]
             self._xMove = self.pDat[1]
             self.model.walk(self._xMove, self._yMove)
+            
             self._wantJump = self.pDat[2]
             self._wantCrouch = self.pDat[3]
+            
             self._hRot = self.pDat[4]
             self._pRot = self.pDat[5]
+            
             self.velocity.set_x(self.pDat[6])
             self.velocity.set_y(self.pDat[7])
             self.velocity.set_z(self.pDat[8])
+            
             self.np.set_h(self.pDat[9])
             self._rig.set_p(self.pDat[10])
             self.model.set_look(self._rig.get_p())
+            
             self.np.set_pos(self.pDat[11],self.pDat[12],self.pDat[13])
             self._isAirborne = (self.pDat[14])
             if self._isCrouched != self.pDat[15]:

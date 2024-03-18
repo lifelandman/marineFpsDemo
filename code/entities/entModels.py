@@ -93,7 +93,7 @@ class playerMdlBase(npEnt):
         self.bundle = self.character.node().get_bundle(0)
         self.bundle.set_blend_type(self.blendMode)
         self.bundle.set_anim_blend_flag(True)
-        #self.bundle.set_frame_blend_flag(True)
+        self.bundle.set_frame_blend_flag(True)
         mnp.set_pos(*pos)
         kwargs['np'] = mnp
         super().__init__(**kwargs)#Trick npEnt into holding the root of our model
@@ -115,6 +115,10 @@ class playerMdlBase(npEnt):
                         sPart.add_exclude_joint(exclude)
                     partCont.store_anim(self.bundle.bind_anim(anim.node().get_bundle(), 0x01 | 0x02 | 0x04, sPart), anim.node().get_bundle().get_name())
                 self.controls[part] = partCont#Store the new animControlCollection under the name of the part
+                
+                
+        for node in self.np.find_all_matches("**/+CollisionNode"):
+            node.show()
 
 
     def play(self, name:str, part:str = "modelRoot", blend:float = 1):
@@ -125,18 +129,17 @@ class playerMdlBase(npEnt):
             return True
         elif not self.check_blend(control, blend):
             return False
+        return True
     
     def loop(self, name:str, part:str = "modelRoot", blend:float = 1):
         control = self.controls[part].find_anim(name)
         if not control.is_playing():
-            if control.get_num_frames() > 1:
-                control.loop(True)
-            else:
-                control.loop(True, 0, 1)#Stupid fucking hack to get around loop passing one-frame animations to pose()
+            control.loop(True)
             self.check_blend(control, blend)
             return True
         elif not self.check_blend(control, blend):
             return False
+        return True
     
     def stop(self, name:str, part:str = "modelRoot"):
         control = self.controls[part].find_anim(name)

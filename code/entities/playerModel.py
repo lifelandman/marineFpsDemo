@@ -1,13 +1,13 @@
 from .entModels import playerMdlBase
 
 class playerMdl(playerMdlBase):
-    parts = {"torso" : (("Diaphram",),("L.thigh", "L.calf", "L.Foot", "L.lowleg", "R.thigh")),
-             "legs" : (("R.thigh", "L.thigh", "L.calf", "L.Foot"),())}
+    parts = {"torso" : (("Diaphram",),("*.thigh",)),
+             "legs" : (("R.thigh", "L.thigh"),())}
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        #self.loop("idle","torso", 1)
-        #self.loop("LookUp", "torso", 0)
+        self.pose("idle","torso", 1)
+        self.pose("LookUp", "torso", 0)
         #self.loop('backRun', 'legs')
         
     def set_look(self, p: float):
