@@ -31,7 +31,7 @@ class playerEnt(npEnt):
     ##################
     def __init__(self, **kwargs):
         super().__init__(**kwargs)#make self.np
-        self.np.set_collide_mask(BitMask32(0b00010))
+        self.np.set_collide_mask(BitMask32(0b0010000))
         self.np.set_tag('player', self.name)
         #accept collision events
         self.accept(self.name + "-into-ground", self.tangible_collide_into_event)
@@ -42,7 +42,7 @@ class playerEnt(npEnt):
         cNode = CollisionNode(self.name + '_bounding_box')
         self.bBSolids = (CollisionBox(Point3(0,0,0), 1,1,2), CollisionBox(Point3(0,0,-1), 1,1,1))#Diffrent collisionSolids for cNode, 0=normal, 1=crouch, 2=fastSwm
         cNode.add_solid(self.bBSolids[0])
-        cNode.set_from_collide_mask(BitMask32(0b10110))#TODO:: change this later to have team collision setting
+        cNode.set_from_collide_mask(BitMask32(0b1010101))#TODO:: change this later to have team collision setting
         self.bBox = self.np.attach_new_node(cNode)
         self.bBox.set_tag('bBox', 't')
         del cNode
@@ -53,14 +53,16 @@ class playerEnt(npEnt):
         orb.set_tangible(False)#For some reason python complains when we set tangible after adding orb as a solid
         cNode.add_solid(orb)
         del orb
-        cNode.set_from_collide_mask(BitMask32(0b01000))
+        cNode.set_from_collide_mask(BitMask32(0b0100000))
         self.wBall = self.np.attach_new_node(cNode)
-        self.wBall.set_collide_mask(BitMask32(0b00000))#No into collisions
+        self.wBall.set_collide_mask(BitMask32(0b0000000))#No into collisions
         del cNode
         ##TODO::: assign bitmasks to above collisionNodes
+        
         #Create Model
         self.model = playerMdl(np = self.np, pos = (0,0,-2))
         self.model.np.set_h(180)#I'm doing some alterations here because I'm testing with a model not made for this project
+        
         #Create bullet LensNode.
         '''
         Panda3d let's you extrude vectors from a lens based on coordinates. we can use this to calculate bullet raycasting vectors. 
@@ -302,6 +304,7 @@ class playerEnt(npEnt):
 
     def destroy(self):
         self.de_spawn()
+        self.model.destroy()
         super().destroy()
 
 

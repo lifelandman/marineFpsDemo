@@ -66,7 +66,7 @@ class spinningModel(modelInstanceEnt, funcSpin):
 
 ##BIIG STUFF. BIG BIG BIG!!!
 
-from panda3d.core import LoaderOptions, Character, PartSubset, auto_bind, AnimControlCollection
+from panda3d.core import LoaderOptions, Character, PartSubset, AnimControlCollection, BitMask32
 '''
 Okay, here's a refrence of stuff:
 Character: the node that holds the geometry, and updates the animation
@@ -116,9 +116,19 @@ class playerMdlBase(npEnt):
                     partCont.store_anim(self.bundle.bind_anim(anim.node().get_bundle(), 0x01 | 0x02 | 0x04, sPart), anim.node().get_bundle().get_name())
                 self.controls[part] = partCont#Store the new animControlCollection under the name of the part
                 
-                
-        for node in self.np.find_all_matches("**/+CollisionNode"):
-            node.show()
+        
+        self.boneBoxes = []
+        for nodeP in self.np.find_all_matches("**/+CollisionNode"):
+            nodeP.show()
+            if nodeP.has_tag("boneBox"):
+                joint = self.character.node().find_joint(nodeP.get_tag("boneBox"))
+                if joint:
+                    joint.add_net_transform(nodeP.node())
+                    nodeP.set_p(90)
+                nodeP.node().set_from_collide_mask(BitMask32(0b0000000))
+                nodeP.node().set_into_collide_mask(BitMask32(0b0001000))
+                del joint
+                self.boneBoxes.append(nodeP.node())
 
 
     def play(self, name:str, part:str = "modelRoot", blend:float = 1):
@@ -177,8 +187,14 @@ class playerMdlBase(npEnt):
     
 
     def destroy(self):
-        for cont in self.controls.items():
+        for key in self.controls:
+            cont = self.controls[key]
             cont.stop_all()
         del self.controls
+        
+        for node in self.boneBoxes:
+            node.clear_effects()
+        del self.boneBoxes
+        
         self.character.remove_node()
         super().destroy()
