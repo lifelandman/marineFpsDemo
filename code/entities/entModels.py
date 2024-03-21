@@ -18,6 +18,7 @@ class modelEnt (npEnt):
     
     modelPath = 'box'
     
+    
     def __init__(self, np, pos = (0,0,0), **kwargs):
         mnp = loader.loadModel(self.modelPath)
         if np != None:
@@ -61,3 +62,139 @@ class modelInstanceEnt (npEnt):
 from .funcs import funcSpin
 class spinningModel(modelInstanceEnt, funcSpin):
     pass
+
+
+##BIIG STUFF. BIG BIG BIG!!!
+
+from panda3d.core import LoaderOptions, Character, PartSubset, AnimControlCollection, BitMask32
+'''
+Okay, here's a refrence of stuff:
+Character: the node that holds the geometry, and updates the animation
+PartSubset: we can use this to define part of the character we want to control independantly
+AnimControl: The class that controlls the animation.
+auto_bind: creates AnimControls for all parts for all visible animations inside the egg file
+'''
+class playerMdlBase(npEnt):
+    modelLoadOps = LoaderOptions(LoaderOptions.LF_search | LoaderOptions.LF_report_errors | LoaderOptions.LF_convert_skeleton)
+    
+    parts = {}#partname: ((include part names), (exclude part names))
+    
+    blendMode = 1#BT_normalized_linear
+    
+    npOursOverrideable = True
+    
+    modelPath = 'player1'
+    
+    def __init__(self, np, pos = (0,0,0), **kwargs):
+        mnp = loader.loadModel(self.modelPath, self.modelLoadOps)
+        if np != None:
+            mnp.reparent_to(np)#We hijack the np parameter and use it as our parent
+        self.character = mnp.find("**/+Character")
+        self.bundle = self.character.node().get_bundle(0)
+        self.bundle.set_blend_type(self.blendMode)
+        self.bundle.set_anim_blend_flag(True)
+        self.bundle.set_frame_blend_flag(True)
+        mnp.set_pos(*pos)
+        kwargs['np'] = mnp
+        super().__init__(**kwargs)#Trick npEnt into holding the root of our model
+        
+        #Character stuff
+        self.controls = {"modelRoot" : AnimControlCollection()}
+        for anim in self.np.find_all_matches("**/+AnimBundleNode"):
+            self.controls["modelRoot"].store_anim(self.bundle.bind_anim(anim.node().get_bundle(), 0x01 | 0x02 | 0x04), anim.node().get_bundle().get_name())
+        
+
+        if len(self.parts) >= 1:#Are there subparts? if so, we need to make controls for those.
+            for part in self.parts.keys():
+                partCont = AnimControlCollection()
+                for anim in self.np.find_all_matches("**/+AnimBundleNode"):
+                    sPart = PartSubset()
+                    for include in self.parts[part][0]:
+                        sPart.add_include_joint(include)
+                    for exclude in self.parts[part][1]:
+                        sPart.add_exclude_joint(exclude)
+                    partCont.store_anim(self.bundle.bind_anim(anim.node().get_bundle(), 0x01 | 0x02 | 0x04, sPart), anim.node().get_bundle().get_name())
+                self.controls[part] = partCont#Store the new animControlCollection under the name of the part
+                
+        
+        self.boneBoxes = []
+        for nodeP in self.np.find_all_matches("**/+CollisionNode"):
+            nodeP.show()
+            if nodeP.has_tag("boneBox"):
+                joint = self.character.node().find_joint(nodeP.get_tag("boneBox"))
+                if joint:
+                    joint.add_net_transform(nodeP.node())
+                    nodeP.set_p(90)
+                nodeP.node().set_from_collide_mask(BitMask32(0b0000000))
+                nodeP.node().set_into_collide_mask(BitMask32(0b0001000))
+                del joint
+                self.boneBoxes.append(nodeP.node())
+
+
+    def play(self, name:str, part:str = "modelRoot", blend:float = 1):
+        control = self.controls[part].find_anim(name)
+        if not control.is_playing():
+            control.play()
+            self.check_blend(control, blend)
+            return True
+        elif not self.check_blend(control, blend):
+            return False
+        return True
+    
+    def loop(self, name:str, part:str = "modelRoot", blend:float = 1):
+        control = self.controls[part].find_anim(name)
+        if not control.is_playing():
+            control.loop(True)
+            self.check_blend(control, blend)
+            return True
+        elif not self.check_blend(control, blend):
+            return False
+        return True
+    
+    def stop(self, name:str, part:str = "modelRoot"):
+        control = self.controls[part].find_anim(name)
+        if control.is_playing() or control.get_num_frames() == 1:
+            control.stop()
+            self.bundle.set_control_effect(control, 0)
+            return True
+        else: return False
+        
+    def pose(self, name:str, part:str = "modelRoot", blend:float = 1.0, frame:float = 0.0):
+        control = self.controls[part].find_anim(name)
+        if control.is_playing():
+            control.stop()
+        control.pose(frame)
+        self.check_blend(control, blend)
+        return True
+    
+    def stop_all(self):
+        for animConCol in self.controls.items():
+            animConCol.stop_all()
+            
+    def change_blend(self, name:str, part:str, blend:float):
+        control = self.controls[part].find_anim(name)
+        return self.check_blend(control, blend)
+            
+    def check_blend(self, control, blend):
+        if blend != self.bundle.get_control_effect(control):
+            self.bundle.set_control_effect(control, blend)
+            return True
+        return False
+    
+    def get_frame(self, name:str, part:str):
+        control = self.controls[part].find_anim(name)
+        return control.get_frame()
+    
+
+    def destroy(self):
+        for key in self.controls:
+            cont = self.controls[key]
+            cont.stop_all()
+        del self.controls
+        
+        for node in self.boneBoxes:
+            node.clear_effects()
+        del self.boneBoxes
+        
+        self.character.remove_node()
+        super().destroy()
