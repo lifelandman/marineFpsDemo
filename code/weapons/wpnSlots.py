@@ -66,7 +66,30 @@ class slotMgr():
         self.activate_weapon(wpn)
         
 
-    def activate_weapon(self, nWpn):
+    def goto_slot(self, slotNum):
+        if not self._slotMask.get_bit(slot): return
+        slot = self._slots[slotNum]
+        
+        if self._activeSlot != slotNum or self._subSlot + 1 > len(slot) - 1:
+            self._subSlot = 0
+            self._activeSlot = slotNum
+        else:
+            self._subSlot += 1
+        
+        wpn = slot[self._subSlot]
+        self.activate_weapon(wpn)
+        
+
+    def activate_weapon(self, nWpn: slotWeapon):
+        if nWpn is self.actWpn: return
         self.actWpn.de_activate(self)
         self.actWpn = nWpn
         self.actWpn.activate(self)
+        
+
+    def destroy(self):
+        del self._slots
+        del self._slotMask
+        del self.actWpn
+        del self._activeSlot
+        del self._subSlot
