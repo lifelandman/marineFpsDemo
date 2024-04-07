@@ -11,6 +11,9 @@ keybinds = [
     ConfigVariableString('crouch', 'shift'),
     
     ConfigVariableString('pause', 'escape'),
+    
+    ConfigVariableString('fire1', 'mouse1'),
+    ConfigVariableString('fire2', 'mouse3')#panda3d handles mouse buttens diffrently than most
 
     
     ]

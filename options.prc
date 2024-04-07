@@ -6,3 +6,5 @@ move-right d
 jump space
 crouch shift
 pause escape
+fire1 mouse1
+fire2 mouse3

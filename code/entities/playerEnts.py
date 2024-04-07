@@ -85,7 +85,8 @@ class playerEnt(npEnt):
         self.wpnMgr.add_weapon(trgrTest(user = self))
         
         #weapon variables
-        
+        self._wpnFire = 0#This tells the interogate function if we've fired on this frame and which fire func we used. Also tells clientPlayer to fire
+        self._changeWpn = False#Tells interogate function that it needs to serialize a change in selected weapon
         
         ################Create all instance variables##############
         
@@ -334,7 +335,7 @@ class clientPlayer(playerEnt):
         #unique graphical stuff
         self.model.np.hide()
         
-    def oRTrig(self):
+    def oRTrig(self):#override trigger
         self.acceptOnce('playData{' + self.name, self.storeProps)
         
     def storeProps(self, val):
@@ -396,6 +397,8 @@ class clientPlayer(playerEnt):
     key_jump = None
     key_crouch = None
     key_pause = None
+    key_fire1 = None
+    key_fire2 = None
     def update_keybinds(self):
         self.key_for = ConfigVariableString('move-forward', 'w').get_string_value()
         self.key_bak = ConfigVariableString('move-backward', 's').get_string_value()
@@ -404,6 +407,8 @@ class clientPlayer(playerEnt):
         self.key_jump = ConfigVariableString('jump', 'space').get_string_value()
         self.key_crouch = ConfigVariableString('crouch', 'shift').get_string_value()
         self.key_pause = ConfigVariableString('pause', 'escape').get_string_value()
+        self.key_fire1 = ConfigVariableString('fire1', 'mouse1').get_string_value()
+        self.key_fire2 = ConfigVariableString('fire2', 'mouse3').get_string_value()
     
     
     
@@ -414,6 +419,10 @@ class clientPlayer(playerEnt):
         self._wantJump = poller.is_button_down(self.key_jump)
         self._wantCrouch = poller.is_button_down(self.key_crouch)
         
+        if poller.is_button_down(self.key_fire1): self._wpnFire = 1
+        elif poller.is_button_down(self.key_fire2): self._wpnFire = 2
+        else: self._wpnFire = 0
+        
         pointer = base.win.get_pointer(0)
         if pointer.get_in_window():#Get mouse movement
             scSize = base.win.getProperties()
@@ -422,6 +431,12 @@ class clientPlayer(playerEnt):
             base.win.movePointer(0, xSize, ySize)
         else: self._hRot, self._pRot = 0,0
         return Task.cont
+    
+    def update(self, task = None):#TODO:: add a function inside slotMgr that checks if active weapon is a triggerWpn
+        if self._wpnFire:
+            if self._wpnFire == 1: self.wpnMgr.actWpn.fire1()
+            else: self.wpnMgr.actWpn.fire2()
+        return super().update(task)
     
     def destroy(self):
         if self._inputActive:

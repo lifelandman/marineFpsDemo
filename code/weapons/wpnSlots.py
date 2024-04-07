@@ -98,6 +98,7 @@ class slotMgr():
         
     def goto_subSlot(self, slotNum, subNum):
         if not self._slotMask.get_bit(slotNum): return False
+        if slotNum == self._activeSlot and subNum == self._subSlot: return False
         slot = self._slots[slotNum]
         for weapon in slot:
             if weapon.priority == subNum:
