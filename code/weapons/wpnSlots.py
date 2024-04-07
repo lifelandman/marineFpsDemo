@@ -13,11 +13,19 @@ class slotWeapon(weaponBase):
     
     anim_set = ""
     
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._isActive = False
+    
     def activate(self, mgr):
-        pass
+        self._isActive = True
     
     def de_activate(self, mgr):
-        pass
+        self._isActive = False
+    
+    def destroy(self):
+        if self._isActive: self.de_activate()
+        super().destroy()
 
 
 
@@ -25,7 +33,7 @@ from panda3d.core import BitMask16
 class slotMgr():
     max_slots = 6
 
-    def __init__(self):
+    def __init__(self, playerName: str):
         #slot dictionary
         self._slots = {}
         self._slotMask = BitMask16(0)
@@ -33,13 +41,22 @@ class slotMgr():
         self._activeSlot = 0
         self._subSlot = 0
         
+        self.actWpn = None
+        
+        self.playerName = playerName#storing this so weapons can set up unique events if need be.
+        #Especially important for collisions/ the weapon needs to be able to know what collisions it needs to process.
+        
 
     def add_weapon(self, weapon: slotWeapon):
         slot = weapon.slot
         if not self._slotMask.get_bit(slot):
             self._slots[slot] = []
-            self._slotMast.set_bit(slot)
+            self._slotMask.set_bit(slot)
         self._slots[slot].insert(weapon.priority, weapon)
+        if not self.actWpn:
+            self._activeSlot = weapon.slot
+            self._subSlot = self._slots[slot].index(weapon)
+            self.first_activate(weapon)
         
 
     def change_weapon(self, amnt: int):#amnt should be 1 or -1
@@ -67,7 +84,7 @@ class slotMgr():
         
 
     def goto_slot(self, slotNum):
-        if not self._slotMask.get_bit(slot): return
+        if not self._slotMask.get_bit(slotNum): return
         slot = self._slots[slotNum]
         
         if self._activeSlot != slotNum or self._subSlot + 1 > len(slot) - 1:
@@ -79,11 +96,25 @@ class slotMgr():
         wpn = slot[self._subSlot]
         self.activate_weapon(wpn)
         
+    def goto_subSlot(self, slotNum, subNum):
+        if not self._slotMask.get_bit(slotNum): return False
+        slot = self._slots[slotNum]
+        for weapon in slot:
+            if weapon.priority == subNum:
+                self.activate_weapon(weapon)
+                self._activeSlot = slotNum
+                self._subSlot = subNum
+                return True
+        return False
+        
 
     def activate_weapon(self, nWpn: slotWeapon):
         if nWpn is self.actWpn: return
         self.actWpn.de_activate(self)
-        self.actWpn = nWpn
+        self.first_activate(nWpn)
+        
+    def first_activate(self, wpn: slotWeapon):
+        self.actWpn = wpn
         self.actWpn.activate(self)
         
 

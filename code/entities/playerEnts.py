@@ -21,6 +21,8 @@ from math import copysign, sqrt, isclose
 ###ours:
 from .npEnt import npEnt
 from .playerModel import playerMdl
+from ..weapons.wpnSlots import slotMgr
+from ..weapons.wpnTrgr import trgrTest
 
 class playerEnt(npEnt):
     
@@ -63,6 +65,7 @@ class playerEnt(npEnt):
         self.model = playerMdl(np = self.np, pos = (0,0,-2))
         self.model.np.set_h(180)#I'm doing some alterations here because I'm testing with a model not made for this project
         
+        #######WEAPONS#######
         #Create bullet LensNode.
         '''
         Panda3d let's you extrude vectors from a lens based on coordinates. we can use this to calculate bullet raycasting vectors. 
@@ -76,6 +79,13 @@ class playerEnt(npEnt):
 
         self._bulletNode = LensNode(self.name + "_bulletLens", PerspectiveLens())#Weapons will modify these properties when they're set active.
         self._bulletLens = self._bulletNode.get_lens()
+        
+        #Create wpnManager
+        self.wpnMgr = slotMgr(self.name)
+        self.wpnMgr.add_weapon(trgrTest(user = self))
+        
+        #weapon variables
+        
         
         ################Create all instance variables##############
         

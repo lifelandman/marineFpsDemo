@@ -9,7 +9,7 @@ weaponBase: this class is the base for everything. it stores the weapon user, au
 '''
 class weaponBase():
     
-    def __init__(self, user, copy, **kwargs):
+    def __init__(self, user = None, copy = None, **kwargs):
         self.user = user
         
         self.pick_up()
@@ -20,7 +20,7 @@ class weaponBase():
     def pick_up(self):#called automatically when user gets weapon
         pass
     
-    def copy(self, other):#copy attributes from another weapon(I.E. if we pick it up off the ground)
+    def copy(self, other):#copy attributes from another weapon(I.E. ammo, eyelander heads)
         pass
     
     def destroy(self):
