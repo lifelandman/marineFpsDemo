@@ -311,6 +311,10 @@ class playerEnt(npEnt):
                                           self.velocity.get_x(), self.velocity.get_y(), self.velocity.get_z(),
                                           self.np.get_h(), self._rig.get_p(), self.np.get_x(), self.np.get_y(), self.np.get_z(),
                                           self._isAirborne, self._isCrouched),))
+        #TODO:: put wpn change message code here
+        if self._wpnFire:
+            server.add_message("fire{" + self.name, (self._wpnFire,))
+            self._wpnFire = 0#This is a double redundancy for clientPlayer, but we need this here for hostNetPlayer, or else it won't get serialized to clients
     
 
     def destroy(self):
@@ -450,6 +454,7 @@ class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, 
         super().__init__(**kwargs)
         self.addTask(self.checkMove, self.name + 'check movement', sort = 10)
         self.accept('playData{' + self.name, self.storePDat)
+        self.accept('fire{' + self.name, self.fire)
         self.pDat = None
         self.over = False
         
@@ -498,12 +503,18 @@ class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, 
         print('next Frame')
     '''
     
+    def fire(self, fireVal):
+        self._wpnFire = fireVal
+        if self._wpnFire == 1: self.wpnMgr.actWpn.fire1()
+        else: self.wpnMgr.actWpn.fire2()
+    
 class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seems legit nor sends out instructions.
     over = False#This might not be nessisary???
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.addTask(self.Move, self.name + 'move', sort = 10)
         self.accept('playData{' + self.name, self.storePDat)
+        self.accept('fire{' + self.name, self.fire)
         self.pDat = None
         
     def storePDat(self, val):
@@ -540,3 +551,8 @@ class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seem
             self.pDat = None
         else:self.update()
         return Task.cont
+    
+
+    def fire(self, fireVal):
+        if fireVal == 1: self.wpnMgr.actWpn.fire1()
+        elif fireVal == 2: self.wpnMgr.actWpn.fire2()#Inconsistent with elsewhere, but we arn't checking if fireVal is 0 here.

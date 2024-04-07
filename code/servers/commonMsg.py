@@ -7,6 +7,7 @@ myMsg = [
     "gameStart",
     "expectOveride",#Hey, we've detected a potential teleport, when we report your position next, go there or else.
     
+    
     ]
 
 valueMsg = {
@@ -19,6 +20,7 @@ valueMsg = {
     "playMap":("string", 1),
     "ready":("u8int", 1),
     "playData":("play", 1),
+    "fire":("u8int", 1),
     }
 
     
