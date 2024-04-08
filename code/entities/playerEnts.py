@@ -318,10 +318,7 @@ class playerEnt(npEnt):
                                           self._isAirborne, self._isCrouched),))
         
         if self._changeWpn:
-            slot = 0
-            subSlot = 0
-            self.wpnMgr.get_slots(slot, subSlot)
-            #print(slot)
+            slot, subSlot = self.wpnMgr.get_slots()
             server.add_message("changeWpn{" + self.name, (slot, subSlot,))
             self._changeWpn = False
         

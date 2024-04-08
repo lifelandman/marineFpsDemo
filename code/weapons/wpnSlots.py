@@ -121,9 +121,10 @@ class slotMgr():
         self.actWpn.activate(self)
         
 
-    def get_slots(self, slot, subSlot):
+    def get_slots(self):
         slot = self.actWpn.slot
         subSlot = self.actWpn.priority
+        return slot, subSlot
         
 
     def destroy(self):
