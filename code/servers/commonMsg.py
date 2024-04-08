@@ -21,6 +21,7 @@ valueMsg = {
     "ready":("u8int", 1),
     "playData":("play", 1),
     "fire":("u8int", 1),
+    "changeWpn":("u8int", 2)
     }
 
     

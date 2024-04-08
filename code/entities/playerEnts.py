@@ -22,7 +22,7 @@ from math import copysign, sqrt, isclose
 from .npEnt import npEnt
 from .playerModel import playerMdl
 from ..weapons.wpnSlots import slotMgr
-from ..weapons.wpnTrgr import trgrTest
+from ..weapons.wpnTrgr import trgrTest, waitTest
 
 class playerEnt(npEnt):
     
@@ -83,6 +83,7 @@ class playerEnt(npEnt):
         #Create wpnManager
         self.wpnMgr = slotMgr(self.name)
         self.wpnMgr.add_weapon(trgrTest(user = self))
+        self.wpnMgr.add_weapon(waitTest(user = self))
         
         #weapon variables
         self._wpnFire = 0#This tells the interogate function if we've fired on this frame and which fire func we used. Also tells clientPlayer to fire
@@ -300,6 +301,10 @@ class playerEnt(npEnt):
     def tangible_collide_out_event(self, entry):
         self._isAirborne = True
         
+    def fire(self, fireVal):
+        if fireVal == 1: messenger.send(self.name + "-fire1")
+        elif fireVal == 2: messenger.send(self.name + "-fire2")#Inconsistent with elsewhere, but we arn't checking if fireVal is 0 here.
+        
     ####################
     #Management Methods#
     ####################        
@@ -311,7 +316,15 @@ class playerEnt(npEnt):
                                           self.velocity.get_x(), self.velocity.get_y(), self.velocity.get_z(),
                                           self.np.get_h(), self._rig.get_p(), self.np.get_x(), self.np.get_y(), self.np.get_z(),
                                           self._isAirborne, self._isCrouched),))
-        #TODO:: put wpn change message code here
+        
+        if self._changeWpn:
+            slot = 0
+            subSlot = 0
+            self.wpnMgr.get_slots(slot, subSlot)
+            #print(slot)
+            server.add_message("changeWpn{" + self.name, (slot, subSlot,))
+            self._changeWpn = False
+        
         if self._wpnFire:
             server.add_message("fire{" + self.name, (self._wpnFire,))
             self._wpnFire = 0#This is a double redundancy for clientPlayer, but we need this here for hostNetPlayer, or else it won't get serialized to clients
@@ -363,6 +376,10 @@ class clientPlayer(playerEnt):
              '''
              base.win.requestProperties(props)
              
+
+             self.ignore(self.key_wpnUp)
+             self.ignore(self.key_wpnDown)
+             
              
              self._inputActive = False
         else:
@@ -374,6 +391,9 @@ class clientPlayer(playerEnt):
             props.set_mouse_mode(WindowProperties.M_absolute)#see above.
             '''
             base.win.requestProperties(props)
+            
+            self.accept(self.key_wpnUp, self.changeWpn, [1,])
+            self.accept(self.key_wpnDown, self.changeWpn, [-1,])
             
             
             self._inputActive = True
@@ -398,21 +418,33 @@ class clientPlayer(playerEnt):
     key_bak = None
     key_left = None
     key_right = None
+    
     key_jump = None
     key_crouch = None
+    
     key_pause = None
+    
     key_fire1 = None
     key_fire2 = None
+    
+    key_wpnUp = None
+    key_wpnDown = None
     def update_keybinds(self):
         self.key_for = ConfigVariableString('move-forward', 'w').get_string_value()
         self.key_bak = ConfigVariableString('move-backward', 's').get_string_value()
         self.key_left = ConfigVariableString('move-left', 'a').get_string_value()
         self.key_right = ConfigVariableString('move-right', 'd').get_string_value()
+        
         self.key_jump = ConfigVariableString('jump', 'space').get_string_value()
         self.key_crouch = ConfigVariableString('crouch', 'shift').get_string_value()
+        
         self.key_pause = ConfigVariableString('pause', 'escape').get_string_value()
+        
         self.key_fire1 = ConfigVariableString('fire1', 'mouse1').get_string_value()
         self.key_fire2 = ConfigVariableString('fire2', 'mouse3').get_string_value()
+        
+        self.key_wpnUp = ConfigVariableString('changeWpn-up', 'wheel_up').get_string_value()
+        self.key_wpnDown = ConfigVariableString('changeWpn-down', 'wheel_down').get_string_value()
     
     
     
@@ -427,6 +459,13 @@ class clientPlayer(playerEnt):
         elif poller.is_button_down(self.key_fire2): self._wpnFire = 2
         else: self._wpnFire = 0
         
+        if poller.is_button_down(self.key_wpnUp):
+            self.wpnMgr.change_weapon(1)
+            self._changeWpn = True
+        elif poller.is_button_down(self.key_wpnDown):
+            self.wpnMgr.change_weapon(-1)
+            self._changeWpn = True
+        
         pointer = base.win.get_pointer(0)
         if pointer.get_in_window():#Get mouse movement
             scSize = base.win.getProperties()
@@ -436,10 +475,15 @@ class clientPlayer(playerEnt):
         else: self._hRot, self._pRot = 0,0
         return Task.cont
     
+
+    def changeWpn(self, val):
+        self.wpnMgr.change_weapon(val)
+        self._changeWpn = True
+        
+    
     def update(self, task = None):#TODO:: add a function inside slotMgr that checks if active weapon is a triggerWpn
         if self._wpnFire:
-            if self._wpnFire == 1: self.wpnMgr.actWpn.fire1()
-            else: self.wpnMgr.actWpn.fire2()
+            self.fire(self._wpnFire)
         return super().update(task)
     
     def destroy(self):
@@ -455,6 +499,7 @@ class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, 
         self.addTask(self.checkMove, self.name + 'check movement', sort = 10)
         self.accept('playData{' + self.name, self.storePDat)
         self.accept('fire{' + self.name, self.fire)
+        self.accept('changeWpn{' + self.name, self.set_weapon)
         self.pDat = None
         self.over = False
         
@@ -505,8 +550,10 @@ class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, 
     
     def fire(self, fireVal):
         self._wpnFire = fireVal
-        if self._wpnFire == 1: self.wpnMgr.actWpn.fire1()
-        else: self.wpnMgr.actWpn.fire2()
+        super().fire(fireVal)
+        
+    def set_weapon(self, slot, priority):
+        self.wpnMgr.goto_subSlot(slot, priority)
     
 class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seems legit nor sends out instructions.
     over = False#This might not be nessisary???
@@ -515,6 +562,7 @@ class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seem
         self.addTask(self.Move, self.name + 'move', sort = 10)
         self.accept('playData{' + self.name, self.storePDat)
         self.accept('fire{' + self.name, self.fire)
+        self.accept('changeWpn{' + self.name, self.set_weapon)
         self.pDat = None
         
     def storePDat(self, val):
@@ -553,6 +601,6 @@ class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seem
         return Task.cont
     
 
-    def fire(self, fireVal):
-        if fireVal == 1: self.wpnMgr.actWpn.fire1()
-        elif fireVal == 2: self.wpnMgr.actWpn.fire2()#Inconsistent with elsewhere, but we arn't checking if fireVal is 0 here.
+    def set_weapon(self, slot, priority):
+        self.wpnMgr.goto_subSlot(slot, priority)
+    

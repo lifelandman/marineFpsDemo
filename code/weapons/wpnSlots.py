@@ -60,7 +60,8 @@ class slotMgr():
         
 
     def change_weapon(self, amnt: int):#amnt should be 1 or -1
-        slotLen = len(self.slots[self._activeSlot])
+        print('trying change')
+        slotLen = len(self._slots[self._activeSlot])
         if slotLen > 1 and (self._subSlot + amnt) <= (slotLen - 1):
             wpn = self._slots[self.activeSlot][self._subSlot + amnt]
             self.activate_weapon(wpn)
@@ -69,9 +70,10 @@ class slotMgr():
         del slotLen
         
         nAmnt = self._activeSlot + amnt
+        if nAmnt < 0: nAmnt = self._slotMask.get_highest_on_bit()
         tries = 0
         while (not self._slotMask.get_bit(nAmnt)) and (tries < 2):
-            if nAmnt + amnt < 0: nAmnt, tries = self.max_slots, tries + 1
+            if nAmnt + amnt < 0: nAmnt, tries = self._slotMask.get_highest_on_bit, tries + 1
             elif nAmnt + amnt > self.max_slots: nAmnt, tries = 0, tries + 1
             else: nAmnt = nAmnt + amnt
         if tries > 2 or nAmnt == self._activeSlot: return#We looped around and there are no other valid slots, do nothing
@@ -117,6 +119,11 @@ class slotMgr():
     def first_activate(self, wpn: slotWeapon):
         self.actWpn = wpn
         self.actWpn.activate(self)
+        
+
+    def get_slots(self, slot, subSlot):
+        slot = self.actWpn.slot
+        subSlot = self.actWpn.priority
         
 
     def destroy(self):

@@ -8,3 +8,5 @@ crouch shift
 pause escape
 fire1 mouse1
 fire2 mouse3
+changeWpn-up wheel_up
+changeWpn-down wheel_down

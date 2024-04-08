@@ -41,7 +41,7 @@ class lobby_ui(DirectObject):
         
         if self.isHost:
             self.server = hostServer()
-            self.name = ConfigVariableString('my-name').get_string_value()
+            self.name = ConfigVariableString('my-name', "player").get_string_value()
             self.memVal = "host"
             self.join_player(self.name, "host")
             self.accept("connect", self.connect_player)

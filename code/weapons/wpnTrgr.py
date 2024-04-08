@@ -17,11 +17,50 @@ class trgrWeapon(slotWeapon, DirectObject):#Can't think of a way to not split th
         super().de_activate
     
     def fire1(self):
-        pass
+        self.primaryFire()
     
     def fire2(self):
+        self.secondaryFire()
+    
+
+    def primaryFire(self):##These two functions can be ignored in a child class, but this makes it easier to 
+        pass##              Define weapons with unique trigger behavior
+    ##In particular, weapons that don't endlessly fire every frame (almost all of them) have some delat
+    #And the propellerpack has diffrent behavior above and below water.
+    def secondaryFire(self):
         pass
     
+
+from direct.task import Task
+class trgrWait(trgrWeapon):
+    '''
+    time1 and time2 have a limit so that they can only be called so often
+    '''
+    
+    wait = 1.0
+    subWait = wait
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self._fireReady = True
+
+    def fire1(self):
+        if self._fireReady:
+            self.primaryFire()
+            self._fireReady = False
+            self.addTask(self.count_down, "countDownTask", sort = 11, extraArgs=[self.wait,], appendTask=True)
+            
+    def fire2(self):
+        if self._fireReady:
+            self.secondaryFire()
+            self._fireReady = False
+            self.addTask(self.count_down, "countDownTask", sort = 11, extraArgs=[self.subWait,], appendTask=True)
+
+    def count_down(self, goal, taskObj):
+        if taskObj.time >= goal:
+            fireReady = True
+            return Task.done
+        return Task.cont
 
 class trgrTest(trgrWeapon):
     
@@ -37,3 +76,18 @@ class trgrTest(trgrWeapon):
         
     def fire2(self):
         print('fire2')
+        
+
+class waitTest(trgrWait):
+    slot = 1
+    priority = 0
+    
+    def activate(self, mgr : slotMgr):
+        super().activate(mgr)
+        print('timeAct')
+    
+    def fire1(self):
+        print('timeFire!')
+        
+    def fire2(self):
+        print('IKU ZE!!!!')
