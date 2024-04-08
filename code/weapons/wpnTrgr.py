@@ -5,15 +5,16 @@ from .wpnSlots import slotWeapon, slotMgr
 
 
 class trgrWeapon(slotWeapon, DirectObject):#Can't think of a way to not split the planned trgrWeapon into two classes.
+    hasAltFire = True
     
     def activate(self, mgr: slotMgr):
         self.accept(mgr.playerName + "-fire1", self.fire1)
-        self.accept(mgr.playerName + "-fire2", self.fire2)
+        if self.hasAltFire: self.accept(mgr.playerName + "-fire2", self.fire2)
         super().activate
         
     def de_activate(self, mgr: slotMgr):
         self.ignore(mgr.playerName + "-fire1")
-        self.ignore(mgr.playerName + "-fire2")
+        if self.hasAltFire: self.ignore(mgr.playerName + "-fire2")
         super().de_activate
     
     def fire1(self):
@@ -41,8 +42,8 @@ class trgrWait(trgrWeapon):
     subWait = wait
     
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
         self._fireReady = True
+        super().__init__(**kwargs)
 
     def fire1(self):
         if self._fireReady:
@@ -58,7 +59,7 @@ class trgrWait(trgrWeapon):
 
     def count_down(self, goal, taskObj):
         if taskObj.time >= goal:
-            fireReady = True
+            self._fireReady = True
             return Task.done
         return Task.cont
 
@@ -86,8 +87,8 @@ class waitTest(trgrWait):
         super().activate(mgr)
         print('timeAct')
     
-    def fire1(self):
+    def primaryFire(self):
         print('timeFire!')
         
-    def fire2(self):
+    def secondaryFire(self):
         print('IKU ZE!!!!')

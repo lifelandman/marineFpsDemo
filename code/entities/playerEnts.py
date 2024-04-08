@@ -88,6 +88,7 @@ class playerEnt(npEnt):
         #weapon variables
         self._wpnFire = 0#This tells the interogate function if we've fired on this frame and which fire func we used. Also tells clientPlayer to fire
         self._changeWpn = False#Tells interogate function that it needs to serialize a change in selected weapon
+        self._reload = False#We've started a reload. This is actually changed by the weapon.
         
         ################Create all instance variables##############
         
