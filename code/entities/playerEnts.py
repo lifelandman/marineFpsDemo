@@ -22,7 +22,8 @@ from math import copysign, sqrt, isclose
 from .npEnt import npEnt
 from .playerModel import playerMdl
 from ..weapons.wpnSlots import slotMgr
-from ..weapons.wpnTrgr import trgrTest, waitTest
+from ..weapons.wpnTrgr import trgrTest
+from ..weapons.wpnAmmo import ammoTest
 
 class playerEnt(npEnt):
     
@@ -83,7 +84,7 @@ class playerEnt(npEnt):
         #Create wpnManager
         self.wpnMgr = slotMgr(self.name)
         self.wpnMgr.add_weapon(trgrTest(user = self))
-        self.wpnMgr.add_weapon(waitTest(user = self))
+        self.wpnMgr.add_weapon(ammoTest(user = self))
         
         #weapon variables
         self._wpnFire = 0#This tells the interogate function if we've fired on this frame and which fire func we used. Also tells clientPlayer to fire
@@ -306,6 +307,7 @@ class playerEnt(npEnt):
         if fireVal == 1: messenger.send(self.name + "-fire1")
         elif fireVal == 2: messenger.send(self.name + "-fire2")#Inconsistent with elsewhere, but we arn't checking if fireVal is 0 here.
         
+        
     ####################
     #Management Methods#
     ####################        
@@ -322,8 +324,10 @@ class playerEnt(npEnt):
             slot, subSlot = self.wpnMgr.get_slots()
             server.add_message("changeWpn{" + self.name, (slot, subSlot,))
             self._changeWpn = False
-        
-        if self._wpnFire:
+            
+        if self._reload:
+            server.add_message("reload{" + self.name)
+        elif self._wpnFire:#Simplify datagram
             server.add_message("fire{" + self.name, (self._wpnFire,))
             self._wpnFire = 0#This is a double redundancy for clientPlayer, but we need this here for hostNetPlayer, or else it won't get serialized to clients
     
@@ -424,25 +428,27 @@ class clientPlayer(playerEnt):
     
     key_fire1 = None
     key_fire2 = None
+    key_reload = None
     
     key_wpnUp = None
     key_wpnDown = None
     def update_keybinds(self):
-        self.key_for = ConfigVariableString('move-forward', 'w').get_string_value()
-        self.key_bak = ConfigVariableString('move-backward', 's').get_string_value()
-        self.key_left = ConfigVariableString('move-left', 'a').get_string_value()
-        self.key_right = ConfigVariableString('move-right', 'd').get_string_value()
+        clientPlayer.key_for = ConfigVariableString('move-forward', 'w').get_string_value()
+        clientPlayer.key_bak = ConfigVariableString('move-backward', 's').get_string_value()
+        clientPlayer.key_left = ConfigVariableString('move-left', 'a').get_string_value()
+        clientPlayer.key_right = ConfigVariableString('move-right', 'd').get_string_value()
         
-        self.key_jump = ConfigVariableString('jump', 'space').get_string_value()
-        self.key_crouch = ConfigVariableString('crouch', 'shift').get_string_value()
+        clientPlayer.key_jump = ConfigVariableString('jump', 'space').get_string_value()
+        clientPlayer.key_crouch = ConfigVariableString('crouch', 'shift').get_string_value()
         
-        self.key_pause = ConfigVariableString('pause', 'escape').get_string_value()
+        clientPlayer.key_pause = ConfigVariableString('pause', 'escape').get_string_value()
         
-        self.key_fire1 = ConfigVariableString('fire1', 'mouse1').get_string_value()
-        self.key_fire2 = ConfigVariableString('fire2', 'mouse3').get_string_value()
+        clientPlayer.key_fire1 = ConfigVariableString('fire1', 'mouse1').get_string_value()
+        clientPlayer.key_fire2 = ConfigVariableString('fire2', 'mouse3').get_string_value()
+        clientPlayer.key_reload = ConfigVariableString('reload', 'r').get_string_value()
         
-        self.key_wpnUp = ConfigVariableString('changeWpn-up', 'wheel_up').get_string_value()
-        self.key_wpnDown = ConfigVariableString('changeWpn-down', 'wheel_down').get_string_value()
+        clientPlayer.key_wpnUp = ConfigVariableString('changeWpn-up', 'wheel_up').get_string_value()
+        clientPlayer.key_wpnDown = ConfigVariableString('changeWpn-down', 'wheel_down').get_string_value()
     
     
     
@@ -456,6 +462,8 @@ class clientPlayer(playerEnt):
         if poller.is_button_down(self.key_fire1): self._wpnFire = 1
         elif poller.is_button_down(self.key_fire2): self._wpnFire = 2
         else: self._wpnFire = 0
+        
+        if poller.is_button_down(self.key_reload): messenger.send('reload{' + self.name)
         
         if poller.is_button_down(self.key_wpnUp):
             self.wpnMgr.change_weapon(1)

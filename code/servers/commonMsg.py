@@ -6,7 +6,7 @@ myMsg = [
     "kick",#BE CAREFULL!!
     "gameStart",
     "expectOveride",#Hey, we've detected a potential teleport, when we report your position next, go there or else.
-    
+    "reload",#First numberable myMsg
     
     ]
 
@@ -28,20 +28,25 @@ valueMsg = {
 def msgFilterStandard(message):
     if message in myMsg:
         return True
+    elif msgCut(message) in myMsg:
+        return True
     else: return False
     
 def msgFilterValue(message):
-    newStr = ''
-    endMess = False
-    for char in message:
-        if char == "{":
-            break
-        newStr = newStr + char
+    newStr = msgCut(message)
         
     ##Above is just a quick filter to remove say, player-IDs from a message.
     if newStr in valueMsg.keys():
         return valueMsg[newStr]
     return False
+
+def msgCut(string):#Moved this code out of valueMsg so we can have player-specific valuless messages.
+    newStr = ''
+    for char in string:
+        if char == "{":
+            break
+        newStr = newStr + char
+    return newStr
 
 
 ##################From here on out we define a bunch of functions that are basically getting a specific data type from the iterator

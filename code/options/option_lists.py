@@ -14,6 +14,7 @@ keybinds = [
     
     ConfigVariableString('fire1', 'mouse1'),
     ConfigVariableString('fire2', 'mouse3'),#panda3d handles mouse buttens diffrently than most
+    ConfigVariableString('reload', 'r'),
     
     ConfigVariableString('changeWpn-up', 'wheel_up'),
     ConfigVariableString('changeWpn-down', 'wheel_down'),

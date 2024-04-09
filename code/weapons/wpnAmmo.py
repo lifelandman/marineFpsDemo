@@ -1,4 +1,6 @@
+from direct.task import Task
 
+from code.weapons.wpnSlots import slotMgr
 
 from .wpnTrgr import trgrWait
 class ammoWeapon(trgrWait):
@@ -9,15 +11,26 @@ class ammoWeapon(trgrWait):
     primAmnt = 1
     secAmnt = primAmnt
     
+    manual_reload = True#False if this can only reload on empty clip, like DODS m1
+    
     def __init__(self, **kwargs):
         self._clip = self.clipSize
         self._storage = self.storageMax
+        self._is_reloading = False
         super().__init__(**kwargs)
+        
+    def activate(self, mgr: slotMgr):
+        if self.manual_reload: self.accept('reload{' + mgr.playerName, self.trigger_reload)
+        super().activate(mgr)
+        
+    def de_activate(self, mgr: slotMgr):
+        if self.manual_reload: self.ignore('reload{' + mgr.playerName)
+        super().de_activate(mgr)
         
 
     def fire1(self):
         if self._fireReady:
-            if (self._clip - self.primAmnt) <= 0:
+            if (self._clip) <= 0:
                 self.trigger_reload()
             else:
                 self.primaryFire()
@@ -28,7 +41,7 @@ class ammoWeapon(trgrWait):
             
     def fire2(self):
         if self._fireReady:
-            if (self._clip - self.secAmnt) <= 0:
+            if (self._clip) <= 0:
                 self.trigger_reload()
             else:
                 self.secondaryFire()
@@ -38,20 +51,37 @@ class ammoWeapon(trgrWait):
     
 
     def trigger_reload(self):
-        if self._storage <= 0:
+        if self._is_reloading or self._storage <= 0 or self._clip == self.clipSize:
             return
+        self._is_reloading = True
         self._fireReady = False
         self.user._reload = True
-        self.addTask(self.reload, "reload", sort = 11, extraArgs = [self.loadWait,], appendTask = True)
+        self.addTask(self.clip_change, "reload", sort = 11, extraArgs = [self.loadWait,], appendTask = True)
 
-    def reload(self, goal, taskObj):
+    def clip_change(self, goal, taskObj):#can't call this reload since it seems that name is taken
         if taskObj.time >= goal:
             if self._storage >= self.clipSize:
+                self._storage -= self.clipSize - self._clip
                 self._clip = self.clipSize
-                self._storage -= self.clipSize
             else:
                 self._clip = self._storage
                 self._storage = 0
-            fireReady = True
+            self._fireReady = True
+            self._is_reloading = False
             return Task.done
         return Task.cont
+    
+    def copy(self, other):
+        self._clip = other._clip
+        self._storage = other._storage
+        super().copy()
+        
+
+class ammoTest(ammoWeapon):
+    
+    def primaryFire(self):
+        print(self._clip, self._storage)
+    
+    def clip_change(self, goal, taskObj):
+        if taskObj.time >= goal: print('reloaded')
+        return super().clip_change(goal, taskObj)

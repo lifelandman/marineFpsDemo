@@ -60,10 +60,9 @@ class slotMgr():
         
 
     def change_weapon(self, amnt: int):#amnt should be 1 or -1
-        print('trying change')
         slotLen = len(self._slots[self._activeSlot])
         if slotLen > 1 and (self._subSlot + amnt) <= (slotLen - 1):
-            wpn = self._slots[self.activeSlot][self._subSlot + amnt]
+            wpn = self._slots[self._activeSlot][self._subSlot + amnt]
             self.activate_weapon(wpn)
             self._subSlot += amnt
             return
