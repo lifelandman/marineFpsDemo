@@ -139,8 +139,8 @@ class slotMgr():
 
     def get_slots(self):
         slot = self.actWpn.slot
-        subSlot = self._subSlot
-        return slot, subSlot
+        priority = self.actWpn.priority#Remember, networked weapon changes occur with goto_subslot!!
+        return slot, priority
         
 
     def destroy(self):

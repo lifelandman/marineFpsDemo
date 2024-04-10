@@ -327,6 +327,7 @@ class playerEnt(npEnt):
             
         if self._reload:
             server.add_message("reload{" + self.name)
+            self._reload = False
         elif self._wpnFire:#Simplify datagram
             server.add_message("fire{" + self.name, (self._wpnFire,))
             self._wpnFire = 0#This is a double redundancy for clientPlayer, but we need this here for hostNetPlayer, or else it won't get serialized to clients
