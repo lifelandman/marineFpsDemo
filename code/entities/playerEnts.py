@@ -335,6 +335,7 @@ class playerEnt(npEnt):
     def destroy(self):
         self.de_spawn()
         self.model.destroy()
+        self.wpnMgr.destroy()
         super().destroy()
 
 

@@ -76,6 +76,12 @@ class ammoWeapon(trgrWait):
         self._storage = other._storage
         super().copy()
         
+    def destroy(self):
+        del self._is_reloading
+        del self._clip
+        del self._storage
+        super().destroy()
+        
 
 class ammoTest(ammoWeapon):
     

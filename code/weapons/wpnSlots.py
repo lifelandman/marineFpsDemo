@@ -60,14 +60,32 @@ class slotMgr():
         
 
     def change_weapon(self, amnt: int):#amnt should be 1 or -1
-        slotLen = len(self._slots[self._activeSlot])
-        if slotLen > 1 and (self._subSlot + amnt) <= (slotLen - 1):
-            wpn = self._slots[self._activeSlot][self._subSlot + amnt]
+        slotLen = len(self._slots[self._activeSlot]) - 1
+        potenSubSlot = self._subSlot + amnt
+        print(potenSubSlot)
+        if slotLen > 0 and potenSubSlot <= (slotLen):
+            if (0 > potenSubSlot):#not pretty, but it gets logic flow right
+                if (self._slotMask.get_lowest_on_bit() == self._activeSlot):
+                    potenSubSlot = slotLen
+                    wpn = self._slots[self._activeSlot][potenSubSlot]
+                    self.activate_weapon(wpn)
+                    self._subSlot = potenSubSlot
+                    return
+            else:
+                wpn = self._slots[self._activeSlot][potenSubSlot]
+                self.activate_weapon(wpn)
+                self._subSlot = potenSubSlot
+                return
+        elif (potenSubSlot > slotLen) and (self._slotMask.get_highest_on_bit() == self._activeSlot):
+            potenSubSlot = 0
+            wpn = self._slots[self._activeSlot][potenSubSlot]
             self.activate_weapon(wpn)
-            self._subSlot += amnt
+            self._subSlot = potenSubSlot
             return
         del slotLen
+        del potenSubSlot
         
+
         nAmnt = self._activeSlot + amnt
         if nAmnt < 0: nAmnt = self._slotMask.get_highest_on_bit()
         tries = 0
@@ -122,11 +140,16 @@ class slotMgr():
 
     def get_slots(self):
         slot = self.actWpn.slot
-        subSlot = self.actWpn.priority
+        subSlot = self._subSlot
         return slot, subSlot
         
 
     def destroy(self):
+        self.actWpn.de_activate(self)
+        for slot in self._slots:
+            for wpn in slot:
+                wpn.destroy()
+                slot.pop(wpn)
         del self._slots
         del self._slotMask
         del self.actWpn
