@@ -62,7 +62,6 @@ class slotMgr():
     def change_weapon(self, amnt: int):#amnt should be 1 or -1
         slotLen = len(self._slots[self._activeSlot]) - 1
         potenSubSlot = self._subSlot + amnt
-        print(potenSubSlot)
         if slotLen > 0 and potenSubSlot <= (slotLen):
             if (0 > potenSubSlot):#not pretty, but it gets logic flow right
                 if (self._slotMask.get_lowest_on_bit() == self._activeSlot):
@@ -146,10 +145,10 @@ class slotMgr():
 
     def destroy(self):
         self.actWpn.de_activate(self)
-        for slot in self._slots:
+        for slot in self._slots.values():
             for wpn in slot:
                 wpn.destroy()
-                slot.pop(wpn)
+                slot.pop(slot.index(wpn))
         del self._slots
         del self._slotMask
         del self.actWpn
