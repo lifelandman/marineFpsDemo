@@ -51,7 +51,7 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         self.playerMgr = playerManager(self)
         
         #logic for syncing game start
-        if self.lobby.isHost:
+        if isHost:
             self.readyTester = []
             self.accept('ready', self.ready_recieve)
             self.ready_recieve('host')

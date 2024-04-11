@@ -7,6 +7,7 @@ from .servers.host import hostServer
 
 from math import ceil
 from os import listdir, getcwd
+import builtins
 
 from .netTracking import netPlayerTracker
 from .game import game_world
@@ -22,6 +23,7 @@ class lobby_ui(DirectObject):
 
         self.pmen = pmen
         self.isHost = isHost
+        builtins.isHost = isHost
 
         self.pList = []
         self.oList = []
@@ -224,6 +226,8 @@ class lobby_ui(DirectObject):
 
     def delete(self):
         self.clear_menu()
+        
+        del builtins.isHost
         
         if self.gameStart:
             self.game.destroy()

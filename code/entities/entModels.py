@@ -127,6 +127,7 @@ class playerMdlBase(npEnt):
                     nodeP.set_p(90)
                 nodeP.node().set_from_collide_mask(BitMask32(0b0000000))
                 nodeP.node().set_into_collide_mask(BitMask32(0b0001000))
+                nodeP.node().modify_solid(0).set_tangible(False)
                 del joint
                 self.boneBoxes.append(nodeP.node())
 

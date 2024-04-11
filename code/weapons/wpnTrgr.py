@@ -38,28 +38,35 @@ class trgrWait(trgrWeapon):
     time1 and time2 have a limit so that they can only be called so often
     '''
     
-    wait = 1.0
+    wait = 0.5
     subWait = wait
     
     def __init__(self, **kwargs):
         self._fireReady = True
+        self._counting = False
         super().__init__(**kwargs)
 
     def fire1(self):
         if self._fireReady:
             self.primaryFire()
             self._fireReady = False
-            self.addTask(self.count_down, "countDownTask", sort = 11, extraArgs=[self.wait,], appendTask=True)
+            self.begin_count(self.wait)
             
     def fire2(self):
         if self._fireReady:
             self.secondaryFire()
             self._fireReady = False
-            self.addTask(self.count_down, "countDownTask", sort = 11, extraArgs=[self.subWait,], appendTask=True)
+            self.begin_count(self.subWait)
+            
+    def begin_count(self, amnt):
+        if not self._counting:
+            self.addTask(self.count_down, "countDownTask", sort = 11, extraArgs=[amnt,], appendTask=True)
+            self._counting = True
 
     def count_down(self, goal, taskObj):
         if taskObj.time >= goal:
             self._fireReady = True
+            self._counting = False
             return Task.done
         return Task.cont
 
