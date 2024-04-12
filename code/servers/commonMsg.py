@@ -19,6 +19,7 @@ valueMsg = {
     "disconnect":("string", 1),
     "playMap":("string", 1),
     "ready":("u8int", 1),
+    "rng":("u32int", 1),
     "playData":("play", 1),
     "fire":("u8int", 1),
     "changeWpn":("u8int", 2)
@@ -60,6 +61,8 @@ def gString (iterator):#oops funny name
     return iterator.get_string()
 def gu8int (iterator):
     return iterator.get_uint8()
+def gu32int (iterator):
+    return iterator.get_uint32()
 def gPlay (iterator):
     #(player._yMove, _xMove, _wantJump, _wantCrouch, _hRot, _pRot, vX,vY,vZ,h,p,x,y,z,is_airborne)
     return (iterator.get_float64(),#y
@@ -85,6 +88,7 @@ grabberTable = {
     "bool":gBool,
     "string":gString,
     "u8int":gu8int,
+    "u32int":gu32int,
     "play":gPlay
     }
 
@@ -97,6 +101,8 @@ def sString (datagram, val):#oops funny name
     return datagram.add_string(val)
 def su8int (datagram, val):
     return datagram.add_uint8(val)
+def su32int (datagram, val):
+    return datagram.add_uint32(val)
 def sPlay (datagram, val):
     datagram.add_float64(val[0]),#y
     datagram.add_float64(val[1]),#x
@@ -121,5 +127,6 @@ setterTable = {
     "bool":sBool,
     "string":sString,
     "u8int":su8int,
+    "u32int":su32int,
     "play":sPlay
     }

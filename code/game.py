@@ -1,3 +1,4 @@
+import random
 from direct.showbase.DirectObject import DirectObject
 
 
@@ -8,6 +9,7 @@ from panda3d.core import ModelPool
 
 #our own code
 from .playerMgr import playerManager
+from .rng import randomGen
 from .entities.entModels import spinningModel
 from .worldLoader import loadWorld
 
@@ -21,7 +23,7 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         #base.enableParticles()
 
         #Create a universal standard of gravity. TODO:: make it so servers can adjust this
-        self.gravity = 0.983
+        #self.gravity = 0.983
 
         #World's collision management
         base.cTrav = CollisionTraverser()
@@ -47,8 +49,11 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         #Gamemode logic here:
         #TODO:: write gamemode logic
 
-        #Spawn Player control logic here: TODO::actually write this, or even rewrite this whole file. most of this is carryover from other project.
+        #Spawn Player control logic here:
         self.playerMgr = playerManager(self)
+        
+        #rng manager
+        self.rngMgr = randomGen()
         
         #logic for syncing game start
         if isHost:
@@ -78,6 +83,7 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         self.ignoreAll()
         
         self.playerMgr.delete()
+        self.rngMgr.delete()
         
         base.disableParticles()
         

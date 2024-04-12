@@ -57,6 +57,7 @@ class lobby_ui(DirectObject):
             if not self.server.success:
                 print('deleting')
                 self.delete()
+        builtins.gameServer = self.server
     
     def connect_player(self, name, pid):#TODO:: see if hostlist can make this more efficient.
         if self.tracker.join_player(name, int(pid)):
@@ -234,6 +235,7 @@ class lobby_ui(DirectObject):
             if self.isHost:
                 self.server.add_message('exit_session')
         
+        del builtins.gameServer
         self.server.shut_down()
         
         self.pmen.build_menu()
