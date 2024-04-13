@@ -43,6 +43,7 @@ class lobby_ui(DirectObject):
         
         if self.isHost:
             self.server = hostServer()
+            builtins.gameServer = self.server
             self.name = ConfigVariableString('my-name', "player").get_string_value()
             self.memVal = "host"
             self.join_player(self.name, "host")
@@ -54,10 +55,11 @@ class lobby_ui(DirectObject):
             self.accept('hostList', self.recieve_players)
             self.accept('playMap', self.play_map)
             self.server = clientServer(ipAdress)
+            builtins.gameServer = self.server
             if not self.server.success:
                 print('deleting')
                 self.delete()
-        builtins.gameServer = self.server
+        
     
     def connect_player(self, name, pid):#TODO:: see if hostlist can make this more efficient.
         if self.tracker.join_player(name, int(pid)):
