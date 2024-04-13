@@ -26,10 +26,12 @@ class menu_ui(DirectObject):
         ###Local connection stuff
         self.localConnectionStuff = []
         self.localConnectionStuff.append(DirectEntry(scale = 0.08, parent= base.aspect2d, command= self.set_ip, pos = (-0.4, 0, 0.05)))
-        self.localConnectionStuff.append(DirectButton(text="join server", scale = 0.08, parent= base.aspect2d, command= self.client_start, extraArgs = [self.ip,], pos = (0, 0, -0.05)))
+        self.localConnectionStuff.append(DirectButton(text="join server", scale = 0.08, parent= base.aspect2d, command= self.client_start, pos = (0, 0, -0.05)))
         
     def set_ip(self, ip):
+        print(ip)
         self.ip = ip
+        print(self.ip)
         
     def delete(self):
         self.optionButton.destroy()
@@ -48,9 +50,9 @@ class menu_ui(DirectObject):
         self.delete()
         lobby_ui(self, True)
         
-    def client_start(self, ip):
+    def client_start(self):
         self.delete()
-        lobby_ui(self, False, ip)
+        lobby_ui(self, False, self.ip)
         
     def playtest(self):
         from .game import game_world
