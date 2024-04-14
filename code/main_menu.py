@@ -29,9 +29,7 @@ class menu_ui(DirectObject):
         self.localConnectionStuff.append(DirectButton(text="join server", scale = 0.08, parent= base.aspect2d, command= self.client_start, pos = (0, 0, -0.05)))
         
     def set_ip(self, ip):
-        print(ip)
         self.ip = ip
-        print(self.ip)
         
     def delete(self):
         self.optionButton.destroy()
