@@ -37,7 +37,7 @@ class playerManager(DirectObject):
             self.clientEnt = newP
             self.playerEnts.append(newP)
         else:
-            newP = hostNetPlayer(name = name) if isHost else clientNetPlayer(name = name)
+            newP = hostNetPlayer(name = name) if base.isHost else clientNetPlayer(name = name)
             newP.add_colliders(base.cTrav, self.gameObj.handler)
             self.playerEnts.append(newP)
             
@@ -68,7 +68,7 @@ class playerManager(DirectObject):
         
     def distribute_players(self, task):
         server = self.gameObj.lobby.server
-        if isHost:
+        if base.isHost:
             for player in self.playerEnts:
                 if player.over:
                     if not self.gameObj.lobby.server.send_direct("expectOveride", self.gameObj.lobby.tracker.get_id(player.name)):

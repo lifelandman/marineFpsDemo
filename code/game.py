@@ -16,6 +16,7 @@ from .worldLoader import loadWorld
 class game_world(DirectObject):#I'll make this a direct object just incase I need it
     def __init__(self, lobby, worldFile = 'models/maps/terrain.egg'):
         self.lobby = lobby
+        base.game_instance = self
 
         super().__init__()
         
@@ -56,7 +57,7 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         self.rngMgr = randomGen()
         
         #logic for syncing game start
-        if isHost:
+        if base.isHost:
             self.readyTester = []
             self.accept('ready', self.ready_recieve)
             self.ready_recieve('host')
@@ -81,6 +82,7 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         
     def destroy(self):
         self.ignoreAll()
+        del base.game_instance
         
         self.playerMgr.delete()
         self.rngMgr.delete()
