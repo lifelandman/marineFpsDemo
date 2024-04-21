@@ -8,19 +8,22 @@ from .damageTypes import bulletDamageType, damageTypeBase
 from panda3d.core import CollisionRay, CollisionNode, CollisionTraverser
 from panda3d.core import BitMask32 as BitMask
 from panda3d.core import CollisionHandlerQueue
+from panda3d.core import Mersenne as rng#max 2,147,483,647
 
 class bulletWeapon(ammoWeapon):
-    maxSpreadX = 30#out of 100
-    maxSpreadY = 20
+    maxSpreadX = 4#In degrees
+    maxSpreadY = 2.5
     
-    bulletFovX = 60
-    bulletFovY = 60
-    offsetY = 0.3
-    offsetZ = -0.2
+    bulletSpreadAngs = [(0,1.4),#A list of base rotations for bullets to cycle through. can be bigger than num bullets
+                       (-1.2,0),(0,0),(1.2,0),
+                       (0,-1.4)]
+    
+    offsetY = 0.5
+    offsetZ = 0.2
     #int((gameSharedRandom * Maximum) >> 31)
     #so basically ((int(gameSharedRandom * maxSpreadX) >> 31) - 0.5*maxSpreadX)/100
     
-    numBullets = 3
+    numBullets = 4
     
     dmgMulPrime = 1
     dmgMulSec = 1
@@ -47,7 +50,7 @@ class bulletWeapon(ammoWeapon):
         self.trav = CollisionTraverser(self.user.name +"weapon traverser")
         for rayNP in self.rays:
             self.trav.add_collider(rayNP, bulletWeapon.queue)
-            rayNP.show()
+            #rayNP.show()
         
 
     def activate(self, mgr: slotMgr):
@@ -55,32 +58,28 @@ class bulletWeapon(ammoWeapon):
         ##Move bulletNP
         self.user._bulletNP.set_y(self.offsetY)
         self.user._bulletNP.set_z(self.offsetZ)
-        self.user._bulletLens.set_fov(self.bulletFovX, self.bulletFovY)
+    
         
-
     def raycast(self, damageType: damageTypeBase, mul, falloff):#We accept damageType as a variable for guns like the tranq gun
-        x = ((int(base.gameSharedRandom * self.maxSpreadX) >> 31) - 0.5*self.maxSpreadX)/100
-        y = ((int(base.gameSharedRandom * self.maxSpreadY) >> 31) - 0.5*self.maxSpreadY)/100
-        xover = 0#rockman joke hue hue hue
-        yover = 0
-        avgX, avgY = 0,0#the number less close to zero determines which overflow variable gets increased.
-        for rayNP in self.rays:
-            ray = rayNP.node().modify_solid(0)
+        maxBases = len(self.bulletSpreadAngs)
+        subRng = rng(base.gameSharedRandom)
+        subSeed = base.gameSharedRandom
+        newOffSet = lambda spread: ((int(subSeed * spread) >> 31) - 0.5*spread)
+        xOffSet = newOffSet(self.maxSpreadX)
+        yOffSet = newOffSet(self.maxSpreadY)
+        bulletAngCount = int(maxBases * subSeed) >> 31
+        for rayNP in self.rays:            
+            baseAngle = self.bulletSpreadAngs[bulletAngCount]
+            x = baseAngle[0] + xOffSet
+            y = baseAngle[1] + yOffSet
+            bulletAngCount = bulletAngCount + 1 if bulletAngCount < maxBases - 1 else 0
+            subSeed = subRng.get_uint31()
+            xOffSet = newOffSet(self.maxSpreadX)
+            yOffSet = newOffSet(self.maxSpreadY)
             
-            x = lensClamp(x + xover)
-            y = lensClamp(y + yover)
-            ray.set_from_lens(self.user._bulletNode, x, y)
-            avgX, avgY = x+avgX/2, y+avgY/2#calc new averages.
-            if abs(avgX) < abs(avgY):#only change one at a time. A: this lets us ensure more variation, B: it ensures we will never have two bullets on the same point.
-                xover += x/3
-                if xover >= self.maxSpreadX/100: xover = 0
-            else:
-                yover += y/3
-                if yover >= self.maxSpreadY/100: yover = 0
-            x = x + xover
-            y = y + yover
+            rayNP.set_h(x)
+            rayNP.set_p(y)
             
-
         self.trav.traverse(base.game_instance.world)
         bulletWeapon.queue.sort_entries()
         

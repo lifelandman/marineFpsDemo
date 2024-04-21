@@ -11,7 +11,8 @@ from panda3d.core import CollisionNode, CollisionBox, CollisionSphere
 from panda3d.core import Point3, Vec3
 from panda3d.core import BitMask32
 #Bullet raytracing:
-from panda3d.core import LensNode, PerspectiveLens
+#from panda3d.core import LensNode, PerspectiveLens
+#from panda3d.fx import FisheyeLens
 #Rotation
 from panda3d.core import Quat
 #Tasks:
@@ -82,11 +83,11 @@ class playerEnt(npEnt):
         m.reparent_to(self._rig)
         m.set_scale(0.5)
 
-        self._bulletNode = LensNode(self.name + "_bulletLens", PerspectiveLens())#Weapons will modify these properties when they're set active.
-        self._bulletLens = self._bulletNode.get_lens()
-        self._bulletLens.set_near(0.0)
-        self._bulletNP = self._rig.attach_new_node(self._bulletNode)
-        self._bulletNP.set_p(-90)
+        #self._bulletNode = LensNode(self.name + "_bulletLens", PerspectiveLens())#Weapons will modify these properties when they're set active.
+        #self._bulletLens = self._bulletNode.get_lens()
+        #self._bulletLens.set_near(0.0)
+        self._bulletNP = self._rig.attach_new_node(self.name +'bulletNP')
+        #self._bulletNP.set_p(-90)
         
         #Create wpnManager
         self.wpnMgr = slotMgr(self.name)
