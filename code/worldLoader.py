@@ -15,10 +15,10 @@ def loadWorld(game, worldFile):
 
     collisionNodes = game.world.find_all_matches('**/+CollisionNode')
     if collisionNodes.get_num_paths() <= 0:
-        game.world.set_collide_mask(BitMask32(0b10000))
+        game.world.set_collide_mask(BitMask32(0b1000000))
     else:
         for nodeP in collisionNodes:
-            nodeP.set_collide_mask(BitMask32(0b10000))
+            nodeP.set_collide_mask(BitMask32(0b1000000))
     del collisionNodes
     #TODO:: add plane for falling out of the world
         

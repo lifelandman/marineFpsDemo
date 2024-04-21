@@ -22,7 +22,8 @@ valueMsg = {
     "rng":("u32int", 1),
     "playData":("play", 1),
     "fire":("u8int", 1),
-    "changeWpn":("u8int", 2)
+    "changeWpn":("u8int", 2),
+    "playerDamageAdd":("float64", 1),
     }
 
     

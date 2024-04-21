@@ -24,10 +24,14 @@ from .playerModel import playerMdl
 from ..weapons.wpnSlots import slotMgr
 from ..weapons.wpnTrgr import trgrTest
 from ..weapons.wpnAmmo import ammoTest
+from ..weapons.bulletBase import bulletWeapon
 
 class playerEnt(npEnt):
     
     skipAccept = True#we don't accept geometry.
+    
+    ##Player Member Variables:
+    maxHealth = 100#We should find a better amount later and have UI translate that to 100 or maybe not
     
     ##################
     #Creation Methods#
@@ -81,11 +85,13 @@ class playerEnt(npEnt):
         self._bulletNode = LensNode(self.name + "_bulletLens", PerspectiveLens())#Weapons will modify these properties when they're set active.
         self._bulletLens = self._bulletNode.get_lens()
         self._bulletLens.set_near(0.0)
+        self._bulletNP = self._rig.attach_new_node(self._bulletNode)
+        self._bulletNP.set_p(-90)
         
         #Create wpnManager
         self.wpnMgr = slotMgr(self.name)
         self.wpnMgr.add_weapon(trgrTest(user = self))
-        self.wpnMgr.add_weapon(ammoTest(user = self))
+        self.wpnMgr.add_weapon(bulletWeapon(user = self))
         
         #weapon variables
         self._wpnFire = 0#This tells the interogate function if we've fired on this frame and which fire func we used. Also tells clientPlayer to fire
@@ -118,6 +124,10 @@ class playerEnt(npEnt):
         self._inCrouch = False#Are we doing the crouching animation?
         self._isCrouched = False
         self._swmFst = False
+        
+        ##Gameplay
+        #Health
+        self.health = self.maxHealth
     
     def add_colliders(self, trav, handler):
         trav.add_collider(self.bBox, handler)
@@ -570,8 +580,11 @@ class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seem
         super().__init__(**kwargs)
         self.addTask(self.Move, self.name + 'move', sort = 10)
         self.accept('playData{' + self.name, self.storePDat)
+        
         self.accept('fire{' + self.name, self.fire)
         self.accept('changeWpn{' + self.name, self.set_weapon)
+        
+        self.accept("playerDamageAdd{" + self.name, self.change_health)
         self.pDat = None
         
     def storePDat(self, val):
@@ -608,6 +621,10 @@ class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seem
             self.pDat = None
         else:self.update()
         return Task.cont
+    
+
+    def change_health(self, dmg):
+        self.health += dmg
     
 
     def set_weapon(self, slot, priority):

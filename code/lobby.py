@@ -42,7 +42,7 @@ class lobby_ui(DirectObject):
         
         if self.isHost:
             self.server = hostServer()
-            builtins.gameServer = self.server
+            base.server = self.server
             self.name = ConfigVariableString('my-name', "player").get_string_value()
             self.memVal = "host"
             self.join_player(self.name, "host")
@@ -54,7 +54,7 @@ class lobby_ui(DirectObject):
             self.accept('hostList', self.recieve_players)
             self.accept('playMap', self.play_map)
             self.server = clientServer(ipAdress)
-            builtins.gameServer = self.server
+            base.server = self.server
             if not self.server.success:
                 print('deleting')
                 self.delete()
@@ -236,7 +236,7 @@ class lobby_ui(DirectObject):
             if self.isHost:
                 self.server.add_message('exit_session')
         
-        del builtins.gameServer
+        del base.server
         self.server.shut_down()
         
         self.pmen.build_menu()

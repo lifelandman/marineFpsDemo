@@ -12,6 +12,7 @@ from .playerMgr import playerManager
 from .rng import randomGen
 from .entities.entModels import spinningModel
 from .worldLoader import loadWorld
+from .weapons.decalMgr import decalMgr
 
 class game_world(DirectObject):#I'll make this a direct object just incase I need it
     def __init__(self, lobby, worldFile = 'models/maps/terrain.egg'):
@@ -46,15 +47,17 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
 
         #Put world generation code calls here
         loadWorld(self, worldFile)
+        
+        ###Game tools
+        #rng manager
+        self.rngMgr = randomGen()
+        self.decalMgr = decalMgr()
 
         #Gamemode logic here:
         #TODO:: write gamemode logic
 
         #Spawn Player control logic here:
         self.playerMgr = playerManager(self)
-        
-        #rng manager
-        self.rngMgr = randomGen()
         
         #logic for syncing game start
         if base.isHost:

@@ -27,7 +27,7 @@ class randomGen(DirectObject):
             self.rngCount = 0
             base.gameSharedRandom = self.rng.get_uint31()
             if base.isHost:
-                gameServer.add_message("rng", (base.gameSharedRandom,))#send new rng value to all clients
+                base.server.add_message("rng", (base.gameSharedRandom,))#send new rng value to all clients
         
         else: self.rngCount += 1
 
