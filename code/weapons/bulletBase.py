@@ -27,8 +27,8 @@ class bulletWeapon(ammoWeapon):
     
     dmgMulPrime = 1
     dmgMulSec = 1
-    falloffPrime = 1
-    falloffSec = 1
+    falloffPrime = 0.5
+    falloffSec = 0.5
     
     queue = CollisionHandlerQueue()
     
@@ -90,13 +90,13 @@ class bulletWeapon(ammoWeapon):
                 if entry.get_from_node_path() in hit_bullets:#we can assume that we've gotten past all the first collisions.
                     #break
                     pass
-                if intoNP.has_tag("player"):
-                    if intoNP.get_tag("player") == self.user.name:
+                if intoNP.has_net_tag("player"):
+                    if intoNP.get_net_tag("player") == self.user.name:
                         continue
                     if base.isHost:
-                        damage = damageType(intoNP.get_tag("player"), self.name)
+                        damage = damageType(intoNP.get_net_tag("player"), self.user.name)
                         damage.calc_from_rayCast(entry, mul = mul, falloff = falloff)
-                        intoNP.get_python_tag('entOwner').take_damage(damage)
+                        intoNP.find_net_tag("player").get_net_python_tag('entOwner').take_damage(damage)
                         damage.serialize()
                 else: base.game_instance.decalMgr.decal_from_bullet_ray(intoNP, entry)
             hit_bullets.append(entry.get_from_node_path())

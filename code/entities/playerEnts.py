@@ -92,7 +92,6 @@ class playerEnt(npEnt):
         
         #Create wpnManager
         self.wpnMgr = slotMgr(self.name)
-        self.wpnMgr.add_weapon(trgrTest(user = self))
         self.wpnMgr.add_weapon(bulletWeapon(user = self))
         
         #weapon variables
@@ -330,11 +329,16 @@ class playerEnt(npEnt):
     ####################
     
     def take_damage(self, damage : damageTypeBase):
+        if not self._isSpawned:
+            return
         damage.apply(self)#We do this here for reasons...
         print(self.health)
         if self.health <= 0:
-            self.de_spawn()
-            messenger.send("death", [self.name, damage.source])
+            self.die(damage.source)
+    
+    def die(self, cause):#TODO:: add code for "dropping weapons"
+        self.de_spawn()
+        messenger.send("death", [self.name, cause])
         
     ####################
     #Management Methods#
@@ -379,7 +383,10 @@ class clientPlayer(playerEnt):
         self.camera = camera#See spawn and de_spawn below.
         self._inputActive = False
         self.accept(self.key_pause, self.toggle_inputs)#GRahhh! should player classes even be entities?
-        self.accept("expectOveride", self.oRTrig)
+        
+        if not base.isHost:
+            self.accept("expectOveride", self.oRTrig)
+            self.accept("kill{" + self.name, self.die)
         
         #unique graphical stuff
         self.model.np.hide()
@@ -441,6 +448,7 @@ class clientPlayer(playerEnt):
     def de_spawn(self):
         super().de_spawn()
         self.camera.reparent_to(base.render)
+        self.toggle_inputs()
         self.removeAllTasks()#Carefull!
     
     #Defining button inputs as member variables. (same among all instances.)
@@ -516,6 +524,11 @@ class clientPlayer(playerEnt):
         self.wpnMgr.change_weapon(val)
         self._changeWpn = True
         
+    def die(self, cause):
+        super().die(cause)
+        if base.isHost:
+            base.server.add_message("kill{" + self.name, (cause,))
+        
     
     def update(self, task = None):#TODO:: add a function inside slotMgr that checks if active weapon is a triggerWpn
         if self._wpnFire:
@@ -584,6 +597,16 @@ class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, 
         print('next Frame')
     '''
     
+    def take_damage(self, damage: damageTypeBase):
+        super().take_damage(damage)
+        if self.health > 0:
+            base.server.add_message("damage{" + self.name)#TODO:: figure this out.
+        
+    def die(self, cause):
+        super().die(cause)
+        base.server.add_message("kill{" + self.name, (cause,))
+
+    
     def fire(self, fireVal):
         self._wpnFire = fireVal
         super().fire(fireVal)
@@ -598,10 +621,12 @@ class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seem
         self.addTask(self.Move, self.name + 'move', sort = 10)
         self.accept('playData{' + self.name, self.storePDat)
         
+        self.accept('kill{' + self.name, self.die)
+        
         self.accept('fire{' + self.name, self.fire)
         self.accept('changeWpn{' + self.name, self.set_weapon)
         
-        self.accept("playerDamageAdd{" + self.name, self.change_health)
+        #self.accept("playerDamageAdd{" + self.name, self.change_health)
         self.pDat = None
         
     def storePDat(self, val):

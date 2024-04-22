@@ -95,8 +95,7 @@ class playerMdlBase(npEnt):
         self.bundle.set_anim_blend_flag(True)
         self.bundle.set_frame_blend_flag(True)
         mnp.set_pos(*pos)
-        kwargs['np'] = mnp
-        super().__init__(**kwargs)#Trick npEnt into holding the root of our model
+        super().__init__(np = mnp, **kwargs)#Trick npEnt into holding the root of our model
         
         #Character stuff
         self.controls = {"modelRoot" : AnimControlCollection()}

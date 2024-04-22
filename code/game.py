@@ -13,6 +13,7 @@ from .rng import randomGen
 from .entities.entModels import spinningModel
 from .worldLoader import loadWorld
 from .weapons.decalMgr import decalMgr
+from.deathMatch import deathMatchLogic
 
 class game_world(DirectObject):#I'll make this a direct object just incase I need it
     def __init__(self, lobby, worldFile = 'models/maps/terrain.egg'):
@@ -57,7 +58,7 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         self.playerMgr = playerManager(self)
         
         #Gamemode logic here:
-        #TODO:: write gamemode logic
+        self.logic = deathMatchLogic()
         
         #logic for syncing game start
         if base.isHost:
@@ -88,7 +89,11 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         del base.game_instance
         
         self.playerMgr.delete()
+        del self.playerMgr
         self.rngMgr.delete()
+        del self.rngMgr
+        self.logic.delete()
+        del self.logic
         
         base.disableParticles()
         

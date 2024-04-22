@@ -14,8 +14,14 @@ class deathMatchLogic(DirectObject):
         if not self._spawnCounting:
             self.do_method_later(self.spawnWaveLen, self.spawnWave_trigger, "spawnWave, activate")
             self._spawnCounting = True
+            print('started spawnWave countDown')
             
     def spawnWave_trigger(self, taskObj):
         base.game_instance.playerMgr.spawn_wave()
         self._spawnCounting = False
         return Task.done
+    
+    def delete(self):
+        self.ignoreAll()
+        self.removeAllTasks()
+        self.detect_leaks()

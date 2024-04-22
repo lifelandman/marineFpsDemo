@@ -22,10 +22,12 @@ class damageTypeBase():
 
 class bulletDamageType(damageTypeBase):
     
-    def calc_from_rayCast(self, entry, mul: int = 1, falloff: int = 1, **kwargs):
+    pointDamage = 15
+    
+    def calc_from_rayCast(self, entry, mul: int = 1, falloff: int = 0.5, **kwargs):
         '''
         mul: damage modifier
         falloff: amount of damage lost per unit. for refrence, default player is 2 units tall.
         '''
         #super().calc_from_rayCast(entry, mul, falloff, **kwargs)#This is only here for if we're placed ahead of some other damage type
-        self.finalDamage = min((self.pointDamage * mul) - (entry.get_interior_point(entry.get_from_node_path()).length() * falloff), 0)
+        self.finalDamage = max((self.pointDamage * mul) - (entry.get_surface_point(entry.get_from_node_path()).length() * falloff), 0)
