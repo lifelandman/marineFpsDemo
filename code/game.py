@@ -53,11 +53,11 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         self.rngMgr = randomGen()
         self.decalMgr = decalMgr()
 
-        #Gamemode logic here:
-        #TODO:: write gamemode logic
-
         #Spawn Player control logic here:
         self.playerMgr = playerManager(self)
+        
+        #Gamemode logic here:
+        #TODO:: write gamemode logic
         
         #logic for syncing game start
         if base.isHost:

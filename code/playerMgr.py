@@ -58,6 +58,8 @@ class playerManager(DirectObject):
         
         i = 0
         for player in self.playerEnts:
+            if player._isSpawned:
+                continue
             if defaultPos or i >= numPaths:
                 player.spawn(stdPoint)
             else:
@@ -67,11 +69,11 @@ class playerManager(DirectObject):
         stdPoint.remove_node()
         
     def distribute_players(self, task):
-        server = self.gameObj.lobby.server
+        server = base.server
         if base.isHost:
             for player in self.playerEnts:
                 if player.over:
-                    if not self.gameObj.lobby.server.send_direct("expectOveride", self.gameObj.lobby.tracker.get_id(player.name)):
+                    if not server.send_direct("expectOveride", self.gameObj.lobby.tracker.get_id(player.name)):
                         continue#something went wrong here. Potentially flag playerEnt rebuild
                     player.over = False
                 player.interrogate(server)

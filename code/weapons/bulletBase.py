@@ -50,7 +50,7 @@ class bulletWeapon(ammoWeapon):
         self.trav = CollisionTraverser(self.user.name +"weapon traverser")
         for rayNP in self.rays:
             self.trav.add_collider(rayNP, bulletWeapon.queue)
-            #rayNP.show()
+            rayNP.show()
         
 
     def activate(self, mgr: slotMgr):
@@ -88,16 +88,18 @@ class bulletWeapon(ammoWeapon):
             if not entry.collided():
                 intoNP = entry.get_into_node_path()
                 if entry.get_from_node_path() in hit_bullets:#we can assume that we've gotten past all the first collisions.
-                    break
-                if intoNP.get_tag("player") == self.user.name:
-                    continue
-                if base.isHost and intoNP.has_tag("player"):
-                    damage = damageType(intoNP.get_tag("player"))
-                    damage.calc_from_rayCast(entry, mul = mul, falloff = falloff)
-                    damage.apply(intoNP.get_python_tag('entOwner'))
-                    damage.serialize()
-                base.game_instance.decalMgr.decal_from_bullet_ray(intoNP, entry)
-                hit_bullets.append(entry.get_from_node_path())
+                    #break
+                    pass
+                if intoNP.has_tag("player"):
+                    if intoNP.get_tag("player") == self.user.name:
+                        continue
+                    if base.isHost:
+                        damage = damageType(intoNP.get_tag("player"), self.name)
+                        damage.calc_from_rayCast(entry, mul = mul, falloff = falloff)
+                        intoNP.get_python_tag('entOwner').take_damage(damage)
+                        damage.serialize()
+                else: base.game_instance.decalMgr.decal_from_bullet_ray(intoNP, entry)
+            hit_bullets.append(entry.get_from_node_path())
         
 
     def primaryFire(self):

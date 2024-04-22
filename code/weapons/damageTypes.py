@@ -3,8 +3,9 @@
 class damageTypeBase():
     pointDamage = 1#Amount of damage without scaling
     
-    def __init__(self, name):#damage target indipendant of calc functions
+    def __init__(self, name, source):#damage target indipendant of calc functions
         self.targetName = name
+        self.source = source
     
     def calc_from_rayCast(self, entry, mul: int = 1, **kwargs):
         self.finalDamage = self.pointDamage * mul#Set finalDamage to a zero default to prevent crashes when damage type does not have appropriate calc function

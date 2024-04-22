@@ -26,6 +26,7 @@ from ..weapons.wpnSlots import slotMgr
 from ..weapons.wpnTrgr import trgrTest
 from ..weapons.wpnAmmo import ammoTest
 from ..weapons.bulletBase import bulletWeapon
+from ..weapons.damageTypes import damageTypeBase
 
 class playerEnt(npEnt):
     
@@ -39,7 +40,7 @@ class playerEnt(npEnt):
     ##################
     def __init__(self, **kwargs):
         super().__init__(**kwargs)#make self.np
-        self.np.set_collide_mask(BitMask32(0b0010000))
+        #self.np.set_collide_mask(BitMask32(0b0010000))
         self.np.set_tag('player', self.name)
         #accept collision events
         self.accept(self.name + "-into-ground", self.tangible_collide_into_event)
@@ -62,8 +63,8 @@ class playerEnt(npEnt):
         cNode.add_solid(orb)
         del orb
         cNode.set_from_collide_mask(BitMask32(0b0100000))
+        cNode.set_into_collide_mask(BitMask32(0b0000000))#No into collisions
         self.wBall = self.np.attach_new_node(cNode)
-        self.wBall.set_collide_mask(BitMask32(0b0000000))#No into collisions
         del cNode
         ##TODO::: assign bitmasks to above collisionNodes
         
@@ -103,6 +104,7 @@ class playerEnt(npEnt):
         
         #Administrative/anti-cheat
         #self.teleportOk = False#Set this to true if and whenever velosity's big enough or we're teleporting somewhere. If not this and this player moved too far, it's possible that client is trying to lie about present location.
+        self._isSpawned = False
         
         #Movement
         self._xMove = 0.0 #float for relatively left/right movement.
@@ -141,13 +143,16 @@ class playerEnt(npEnt):
     ##########
         
     def spawn(self, sPoint: NodePath):
-        self.np.reparent_to(base.render)
+        self.np.reparent_to(base.game_instance.world)
         self.np.set_pos(sPoint, 0,0,0)
         self.np.set_h(sPoint, 0)
         self._isAirborne = True
+        self.health = self.maxHealth
+        self._isSpawned = True
     
     def de_spawn(self):
         self.np.detach_node()#carefull not to lose the class refrence during this time!
+        self._isSpawned = False
         
     ##################
     #Movement Methods#
@@ -318,7 +323,18 @@ class playerEnt(npEnt):
     def fire(self, fireVal):
         if fireVal == 1: messenger.send(self.name + "-fire1")
         elif fireVal == 2: messenger.send(self.name + "-fire2")#Inconsistent with elsewhere, but we arn't checking if fireVal is 0 here.
-        
+    
+
+    ####################
+    ######Gameplay######
+    ####################
+    
+    def take_damage(self, damage : damageTypeBase):
+        damage.apply(self)#We do this here for reasons...
+        print(self.health)
+        if self.health <= 0:
+            self.de_spawn()
+            messenger.send("death", [self.name, damage.source])
         
     ####################
     #Management Methods#

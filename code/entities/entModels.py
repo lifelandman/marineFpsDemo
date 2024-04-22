@@ -116,7 +116,7 @@ class playerMdlBase(npEnt):
                     partCont.store_anim(self.bundle.bind_anim(anim.node().get_bundle(), 0x01 | 0x02 | 0x04, sPart), anim.node().get_bundle().get_name())
                 self.controls[part] = partCont#Store the new animControlCollection under the name of the part
                 
-        
+
         self.boneBoxes = []
         for nodeP in self.np.find_all_matches("**/+CollisionNode"):
             nodeP.show()
