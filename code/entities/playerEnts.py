@@ -23,8 +23,6 @@ from math import copysign, sqrt, isclose
 from .npEnt import npEnt
 from .playerModel import playerMdl
 from ..weapons.wpnSlots import slotMgr
-from ..weapons.wpnTrgr import trgrTest
-from ..weapons.wpnAmmo import ammoTest
 from ..weapons.bulletBase import bulletWeapon
 from ..weapons.damageTypes import damageTypeBase
 
@@ -130,6 +128,7 @@ class playerEnt(npEnt):
         ##Gameplay
         #Health
         self.health = self.maxHealth
+        self.health_changed = False
     
     def add_colliders(self, trav, handler):
         trav.add_collider(self.bBox, handler)
@@ -328,13 +327,17 @@ class playerEnt(npEnt):
     ######Gameplay######
     ####################
     
+    def change_health(self, val):
+        self.health = val
+    
     def take_damage(self, damage : damageTypeBase):
         if not self._isSpawned:
             return
         damage.apply(self)#We do this here for reasons...
-        print(self.health)
-        if self.health <= 0:
-            self.die(damage.source)
+        if base.isHost:
+            if self.health <= 0:#Host tells us when to die, we don't decide that for ourselves.
+                self.die(damage.source)
+            self.health_changed =True
     
     def die(self, cause):#TODO:: add code for "dropping weapons"
         self.de_spawn()
@@ -363,6 +366,10 @@ class playerEnt(npEnt):
         elif self._wpnFire:#Simplify datagram
             server.add_message("fire{" + self.name, (self._wpnFire,))
             self._wpnFire = 0#This is a double redundancy for clientPlayer, but we need this here for hostNetPlayer, or else it won't get serialized to clients
+            
+        if self.health_changed:
+            server.add_message("playerHealthChange{" + self.name, (self.health,))
+            self.health_changed = False
     
 
     def destroy(self):
@@ -387,6 +394,7 @@ class clientPlayer(playerEnt):
         if not base.isHost:
             self.accept("expectOveride", self.oRTrig)
             self.accept("kill{" + self.name, self.die)
+            self.accept("playerHealthChange{" + self.name, self.change_health)
         
         #unique graphical stuff
         self.model.np.hide()
@@ -626,7 +634,7 @@ class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seem
         self.accept('fire{' + self.name, self.fire)
         self.accept('changeWpn{' + self.name, self.set_weapon)
         
-        #self.accept("playerDamageAdd{" + self.name, self.change_health)
+        self.accept("playerHealthChange{" + self.name, self.change_health)
         self.pDat = None
         
     def storePDat(self, val):
@@ -663,11 +671,7 @@ class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seem
             self.pDat = None
         else:self.update()
         return Task.cont
-    
-
-    def change_health(self, dmg):
-        self.health += dmg
-    
+        
 
     def set_weapon(self, slot, priority):
         self.wpnMgr.goto_subSlot(slot, priority)

@@ -15,14 +15,12 @@ class damageTypeBase():
     def apply(self, targetEnt):#do here so we can apply status effects, etc.
         targetEnt.health -= self.finalDamage
     
-    def serialize(self):#This should only be called from within the 
-        if self.finalDamage > 0: base.server.add_message("playerDamageAdd{" + self.targetName, (-self.finalDamage,))
 
 
 
 class bulletDamageType(damageTypeBase):
     
-    pointDamage = 15
+    pointDamage = 10
     
     def calc_from_rayCast(self, entry, mul: int = 1, falloff: int = 0.5, **kwargs):
         '''

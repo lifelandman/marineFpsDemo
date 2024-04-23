@@ -22,7 +22,7 @@ valueMsg = {
     "playData":("play", 1),
     "fire":("u8int", 1),
     "changeWpn":("u8int", 2),
-    "playerDamageAdd":("float64", 1),
+    "playerHealthChange":("float64", 1),
     "kill":("string", 1),
     }
 
