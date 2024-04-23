@@ -6,7 +6,7 @@ myMsg = [
     "kick",#BE CAREFULL!!
     "gameStart",
     "expectOveride",#Hey, we've detected a potential teleport, when we report your position next, go there or else.
-    
+    "reload",#First numberable myMsg
     ]
 
 valueMsg = {
@@ -18,27 +18,37 @@ valueMsg = {
     "disconnect":("string", 1),
     "playMap":("string", 1),
     "ready":("u8int", 1),
+    "rng":("u32int", 1),
     "playData":("play", 1),
+    "fire":("u8int", 1),
+    "changeWpn":("u8int", 2),
+    "playerHealthChange":("float64", 1),
+    "kill":("string", 1),
     }
 
     
 def msgFilterStandard(message):
     if message in myMsg:
         return True
+    elif msgCut(message) in myMsg:
+        return True
     else: return False
     
 def msgFilterValue(message):
-    newStr = ''
-    endMess = False
-    for char in message:
-        if char == "{":
-            break
-        newStr = newStr + char
+    newStr = msgCut(message)
         
     ##Above is just a quick filter to remove say, player-IDs from a message.
     if newStr in valueMsg.keys():
         return valueMsg[newStr]
     return False
+
+def msgCut(string):#Moved this code out of valueMsg so we can have player-specific valuless messages.
+    newStr = ''
+    for char in string:
+        if char == "{":
+            break
+        newStr = newStr + char
+    return newStr
 
 
 ##################From here on out we define a bunch of functions that are basically getting a specific data type from the iterator
@@ -52,6 +62,8 @@ def gString (iterator):#oops funny name
     return iterator.get_string()
 def gu8int (iterator):
     return iterator.get_uint8()
+def gu32int (iterator):
+    return iterator.get_uint32()
 def gPlay (iterator):
     #(player._yMove, _xMove, _wantJump, _wantCrouch, _hRot, _pRot, vX,vY,vZ,h,p,x,y,z,is_airborne)
     return (iterator.get_float64(),#y
@@ -77,6 +89,7 @@ grabberTable = {
     "bool":gBool,
     "string":gString,
     "u8int":gu8int,
+    "u32int":gu32int,
     "play":gPlay
     }
 
@@ -89,6 +102,8 @@ def sString (datagram, val):#oops funny name
     return datagram.add_string(val)
 def su8int (datagram, val):
     return datagram.add_uint8(val)
+def su32int (datagram, val):
+    return datagram.add_uint32(val)
 def sPlay (datagram, val):
     datagram.add_float64(val[0]),#y
     datagram.add_float64(val[1]),#x
@@ -113,5 +128,6 @@ setterTable = {
     "bool":sBool,
     "string":sString,
     "u8int":su8int,
+    "u32int":su32int,
     "play":sPlay
     }

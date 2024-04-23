@@ -11,7 +11,8 @@ from panda3d.core import CollisionNode, CollisionBox, CollisionSphere
 from panda3d.core import Point3, Vec3
 from panda3d.core import BitMask32
 #Bullet raytracing:
-from panda3d.core import LensNode, PerspectiveLens
+#from panda3d.core import LensNode, PerspectiveLens
+#from panda3d.fx import FisheyeLens
 #Rotation
 from panda3d.core import Quat
 #Tasks:
@@ -21,17 +22,23 @@ from math import copysign, sqrt, isclose
 ###ours:
 from .npEnt import npEnt
 from .playerModel import playerMdl
+from ..weapons.wpnSlots import slotMgr
+from ..weapons.bulletBase import bulletWeapon
+from ..weapons.damageTypes import damageTypeBase
 
 class playerEnt(npEnt):
     
     skipAccept = True#we don't accept geometry.
+    
+    ##Player Member Variables:
+    maxHealth = 100#We should find a better amount later and have UI translate that to 100 or maybe not
     
     ##################
     #Creation Methods#
     ##################
     def __init__(self, **kwargs):
         super().__init__(**kwargs)#make self.np
-        self.np.set_collide_mask(BitMask32(0b0010000))
+        #self.np.set_collide_mask(BitMask32(0b0010000))
         self.np.set_tag('player', self.name)
         #accept collision events
         self.accept(self.name + "-into-ground", self.tangible_collide_into_event)
@@ -54,8 +61,8 @@ class playerEnt(npEnt):
         cNode.add_solid(orb)
         del orb
         cNode.set_from_collide_mask(BitMask32(0b0100000))
+        cNode.set_into_collide_mask(BitMask32(0b0000000))#No into collisions
         self.wBall = self.np.attach_new_node(cNode)
-        self.wBall.set_collide_mask(BitMask32(0b0000000))#No into collisions
         del cNode
         ##TODO::: assign bitmasks to above collisionNodes
         
@@ -63,6 +70,7 @@ class playerEnt(npEnt):
         self.model = playerMdl(np = self.np, pos = (0,0,-2))
         self.model.np.set_h(180)#I'm doing some alterations here because I'm testing with a model not made for this project
         
+        #######WEAPONS#######
         #Create bullet LensNode.
         '''
         Panda3d let's you extrude vectors from a lens based on coordinates. we can use this to calculate bullet raycasting vectors. 
@@ -74,13 +82,26 @@ class playerEnt(npEnt):
         m.reparent_to(self._rig)
         m.set_scale(0.5)
 
-        self._bulletNode = LensNode(self.name + "_bulletLens", PerspectiveLens())#Weapons will modify these properties when they're set active.
-        self._bulletLens = self._bulletNode.get_lens()
+        #self._bulletNode = LensNode(self.name + "_bulletLens", PerspectiveLens())#Weapons will modify these properties when they're set active.
+        #self._bulletLens = self._bulletNode.get_lens()
+        #self._bulletLens.set_near(0.0)
+        self._bulletNP = self._rig.attach_new_node(self.name +'bulletNP')
+        #self._bulletNP.set_p(-90)
+        
+        #Create wpnManager
+        self.wpnMgr = slotMgr(self.name)
+        self.wpnMgr.add_weapon(bulletWeapon(user = self))
+        
+        #weapon variables
+        self._wpnFire = 0#This tells the interogate function if we've fired on this frame and which fire func we used. Also tells clientPlayer to fire
+        self._changeWpn = False#Tells interogate function that it needs to serialize a change in selected weapon
+        self._reload = False#We've started a reload. This is actually changed by the weapon.
         
         ################Create all instance variables##############
         
         #Administrative/anti-cheat
         #self.teleportOk = False#Set this to true if and whenever velosity's big enough or we're teleporting somewhere. If not this and this player moved too far, it's possible that client is trying to lie about present location.
+        self._isSpawned = False
         
         #Movement
         self._xMove = 0.0 #float for relatively left/right movement.
@@ -103,6 +124,11 @@ class playerEnt(npEnt):
         self._inCrouch = False#Are we doing the crouching animation?
         self._isCrouched = False
         self._swmFst = False
+        
+        ##Gameplay
+        #Health
+        self.health = self.maxHealth
+        self.health_changed = False
     
     def add_colliders(self, trav, handler):
         trav.add_collider(self.bBox, handler)
@@ -115,13 +141,16 @@ class playerEnt(npEnt):
     ##########
         
     def spawn(self, sPoint: NodePath):
-        self.np.reparent_to(base.render)
+        self.np.reparent_to(base.game_instance.world)
         self.np.set_pos(sPoint, 0,0,0)
         self.np.set_h(sPoint, 0)
         self._isAirborne = True
+        self.health = self.maxHealth
+        self._isSpawned = True
     
     def de_spawn(self):
         self.np.detach_node()#carefull not to lose the class refrence during this time!
+        self._isSpawned = False
         
     ##################
     #Movement Methods#
@@ -289,6 +318,31 @@ class playerEnt(npEnt):
     def tangible_collide_out_event(self, entry):
         self._isAirborne = True
         
+    def fire(self, fireVal):
+        if fireVal == 1: messenger.send(self.name + "-fire1")
+        elif fireVal == 2: messenger.send(self.name + "-fire2")#Inconsistent with elsewhere, but we arn't checking if fireVal is 0 here.
+    
+
+    ####################
+    ######Gameplay######
+    ####################
+    
+    def change_health(self, val):
+        self.health = val
+    
+    def take_damage(self, damage : damageTypeBase):
+        if not self._isSpawned:
+            return
+        damage.apply(self)#We do this here for reasons...
+        if base.isHost:
+            if self.health <= 0:#Host tells us when to die, we don't decide that for ourselves.
+                self.die(damage.source)
+            self.health_changed =True
+    
+    def die(self, cause):#TODO:: add code for "dropping weapons"
+        self.de_spawn()
+        messenger.send("death", [self.name, cause])
+        
     ####################
     #Management Methods#
     ####################        
@@ -300,11 +354,28 @@ class playerEnt(npEnt):
                                           self.velocity.get_x(), self.velocity.get_y(), self.velocity.get_z(),
                                           self.np.get_h(), self._rig.get_p(), self.np.get_x(), self.np.get_y(), self.np.get_z(),
                                           self._isAirborne, self._isCrouched),))
+        
+        if self._changeWpn:
+            slot, subSlot = self.wpnMgr.get_slots()
+            server.add_message("changeWpn{" + self.name, (slot, subSlot,))
+            self._changeWpn = False
+            
+        if self._reload:
+            server.add_message("reload{" + self.name)
+            self._reload = False
+        elif self._wpnFire:#Simplify datagram
+            server.add_message("fire{" + self.name, (self._wpnFire,))
+            self._wpnFire = 0#This is a double redundancy for clientPlayer, but we need this here for hostNetPlayer, or else it won't get serialized to clients
+            
+        if self.health_changed:
+            server.add_message("playerHealthChange{" + self.name, (self.health,))
+            self.health_changed = False
     
 
     def destroy(self):
         self.de_spawn()
         self.model.destroy()
+        self.wpnMgr.destroy()
         super().destroy()
 
 
@@ -319,12 +390,16 @@ class clientPlayer(playerEnt):
         self.camera = camera#See spawn and de_spawn below.
         self._inputActive = False
         self.accept(self.key_pause, self.toggle_inputs)#GRahhh! should player classes even be entities?
-        self.accept("expectOveride", self.oRTrig)
+        
+        if not base.isHost:
+            self.accept("expectOveride", self.oRTrig)
+            self.accept("kill{" + self.name, self.die)
+            self.accept("playerHealthChange{" + self.name, self.change_health)
         
         #unique graphical stuff
         self.model.np.hide()
         
-    def oRTrig(self):
+    def oRTrig(self):#override trigger
         self.acceptOnce('playData{' + self.name, self.storeProps)
         
     def storeProps(self, val):
@@ -348,6 +423,10 @@ class clientPlayer(playerEnt):
              '''
              base.win.requestProperties(props)
              
+
+             self.ignore(self.key_wpnUp)
+             self.ignore(self.key_wpnDown)
+             
              
              self._inputActive = False
         else:
@@ -359,6 +438,9 @@ class clientPlayer(playerEnt):
             props.set_mouse_mode(WindowProperties.M_absolute)#see above.
             '''
             base.win.requestProperties(props)
+            
+            self.accept(self.key_wpnUp, self.changeWpn, [1,])
+            self.accept(self.key_wpnDown, self.changeWpn, [-1,])
             
             
             self._inputActive = True
@@ -374,6 +456,7 @@ class clientPlayer(playerEnt):
     def de_spawn(self):
         super().de_spawn()
         self.camera.reparent_to(base.render)
+        self.toggle_inputs()
         self.removeAllTasks()#Carefull!
     
     #Defining button inputs as member variables. (same among all instances.)
@@ -383,17 +466,35 @@ class clientPlayer(playerEnt):
     key_bak = None
     key_left = None
     key_right = None
+    
     key_jump = None
     key_crouch = None
+    
     key_pause = None
+    
+    key_fire1 = None
+    key_fire2 = None
+    key_reload = None
+    
+    key_wpnUp = None
+    key_wpnDown = None
     def update_keybinds(self):
-        self.key_for = ConfigVariableString('move-forward', 'w').get_string_value()
-        self.key_bak = ConfigVariableString('move-backward', 's').get_string_value()
-        self.key_left = ConfigVariableString('move-left', 'a').get_string_value()
-        self.key_right = ConfigVariableString('move-right', 'd').get_string_value()
-        self.key_jump = ConfigVariableString('jump', 'space').get_string_value()
-        self.key_crouch = ConfigVariableString('crouch', 'shift').get_string_value()
-        self.key_pause = ConfigVariableString('pause', 'escape').get_string_value()
+        clientPlayer.key_for = ConfigVariableString('move-forward', 'w').get_string_value()
+        clientPlayer.key_bak = ConfigVariableString('move-backward', 's').get_string_value()
+        clientPlayer.key_left = ConfigVariableString('move-left', 'a').get_string_value()
+        clientPlayer.key_right = ConfigVariableString('move-right', 'd').get_string_value()
+        
+        clientPlayer.key_jump = ConfigVariableString('jump', 'space').get_string_value()
+        clientPlayer.key_crouch = ConfigVariableString('crouch', 'shift').get_string_value()
+        
+        clientPlayer.key_pause = ConfigVariableString('pause', 'escape').get_string_value()
+        
+        clientPlayer.key_fire1 = ConfigVariableString('fire1', 'mouse1').get_string_value()
+        clientPlayer.key_fire2 = ConfigVariableString('fire2', 'mouse3').get_string_value()
+        clientPlayer.key_reload = ConfigVariableString('reload', 'r').get_string_value()
+        
+        clientPlayer.key_wpnUp = ConfigVariableString('changeWpn-up', 'wheel_up').get_string_value()
+        clientPlayer.key_wpnDown = ConfigVariableString('changeWpn-down', 'wheel_down').get_string_value()
     
     
     
@@ -404,6 +505,19 @@ class clientPlayer(playerEnt):
         self._wantJump = poller.is_button_down(self.key_jump)
         self._wantCrouch = poller.is_button_down(self.key_crouch)
         
+        if poller.is_button_down(self.key_fire1): self._wpnFire = 1
+        elif poller.is_button_down(self.key_fire2): self._wpnFire = 2
+        else: self._wpnFire = 0
+        
+        if poller.is_button_down(self.key_reload): messenger.send('reload{' + self.name)
+        
+        if poller.is_button_down(self.key_wpnUp):
+            self.wpnMgr.change_weapon(1)
+            self._changeWpn = True
+        elif poller.is_button_down(self.key_wpnDown):
+            self.wpnMgr.change_weapon(-1)
+            self._changeWpn = True
+        
         pointer = base.win.get_pointer(0)
         if pointer.get_in_window():#Get mouse movement
             scSize = base.win.getProperties()
@@ -412,6 +526,22 @@ class clientPlayer(playerEnt):
             base.win.movePointer(0, xSize, ySize)
         else: self._hRot, self._pRot = 0,0
         return Task.cont
+    
+
+    def changeWpn(self, val):
+        self.wpnMgr.change_weapon(val)
+        self._changeWpn = True
+        
+    def die(self, cause):
+        super().die(cause)
+        if base.isHost:
+            base.server.add_message("kill{" + self.name, (cause,))
+        
+    
+    def update(self, task = None):#TODO:: add a function inside slotMgr that checks if active weapon is a triggerWpn
+        if self._wpnFire:
+            self.fire(self._wpnFire)
+        return super().update(task)
     
     def destroy(self):
         if self._inputActive:
@@ -425,6 +555,8 @@ class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, 
         super().__init__(**kwargs)
         self.addTask(self.checkMove, self.name + 'check movement', sort = 10)
         self.accept('playData{' + self.name, self.storePDat)
+        self.accept('fire{' + self.name, self.fire)
+        self.accept('changeWpn{' + self.name, self.set_weapon)
         self.pDat = None
         self.over = False
         
@@ -473,12 +605,36 @@ class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, 
         print('next Frame')
     '''
     
+    def take_damage(self, damage: damageTypeBase):
+        super().take_damage(damage)
+        if self.health > 0:
+            base.server.add_message("damage{" + self.name)#TODO:: figure this out.
+        
+    def die(self, cause):
+        super().die(cause)
+        base.server.add_message("kill{" + self.name, (cause,))
+
+    
+    def fire(self, fireVal):
+        self._wpnFire = fireVal
+        super().fire(fireVal)
+        
+    def set_weapon(self, slot, priority):
+        self.wpnMgr.goto_subSlot(slot, priority)
+    
 class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seems legit nor sends out instructions.
     over = False#This might not be nessisary???
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.addTask(self.Move, self.name + 'move', sort = 10)
         self.accept('playData{' + self.name, self.storePDat)
+        
+        self.accept('kill{' + self.name, self.die)
+        
+        self.accept('fire{' + self.name, self.fire)
+        self.accept('changeWpn{' + self.name, self.set_weapon)
+        
+        self.accept("playerHealthChange{" + self.name, self.change_health)
         self.pDat = None
         
     def storePDat(self, val):
@@ -515,3 +671,8 @@ class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seem
             self.pDat = None
         else:self.update()
         return Task.cont
+        
+
+    def set_weapon(self, slot, priority):
+        self.wpnMgr.goto_subSlot(slot, priority)
+    

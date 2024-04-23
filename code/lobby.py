@@ -22,6 +22,7 @@ class lobby_ui(DirectObject):
 
         self.pmen = pmen
         self.isHost = isHost
+        base.isHost = isHost
 
         self.pList = []
         self.oList = []
@@ -41,7 +42,8 @@ class lobby_ui(DirectObject):
         
         if self.isHost:
             self.server = hostServer()
-            self.name = ConfigVariableString('my-name').get_string_value()
+            base.server = self.server
+            self.name = ConfigVariableString('my-name', "player").get_string_value()
             self.memVal = "host"
             self.join_player(self.name, "host")
             self.accept("connect", self.connect_player)
@@ -52,9 +54,11 @@ class lobby_ui(DirectObject):
             self.accept('hostList', self.recieve_players)
             self.accept('playMap', self.play_map)
             self.server = clientServer(ipAdress)
+            base.server = self.server
             if not self.server.success:
                 print('deleting')
                 self.delete()
+        
     
     def connect_player(self, name, pid):#TODO:: see if hostlist can make this more efficient.
         if self.tracker.join_player(name, int(pid)):
@@ -225,11 +229,14 @@ class lobby_ui(DirectObject):
     def delete(self):
         self.clear_menu()
         
+        del base.isHost
+        
         if self.gameStart:
             self.game.destroy()
             if self.isHost:
                 self.server.add_message('exit_session')
         
+        del base.server
         self.server.shut_down()
         
         self.pmen.build_menu()

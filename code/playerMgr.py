@@ -17,7 +17,6 @@ class playerManager(DirectObject):
     def __init__(self, gameObj):
         clientPlayer.update_keybinds(clientPlayer)
         self.gameObj = gameObj
-        self.isHost = self.gameObj.lobby.isHost
         self.playerEnts = []
         self.clientEnt = None#if we ever add split-screen multiplayer, make this a list.
         self.build_players()
@@ -38,7 +37,7 @@ class playerManager(DirectObject):
             self.clientEnt = newP
             self.playerEnts.append(newP)
         else:
-            newP = hostNetPlayer(name = name) if self.isHost else clientNetPlayer(name = name)
+            newP = hostNetPlayer(name = name) if base.isHost else clientNetPlayer(name = name)
             newP.add_colliders(base.cTrav, self.gameObj.handler)
             self.playerEnts.append(newP)
             
@@ -59,6 +58,8 @@ class playerManager(DirectObject):
         
         i = 0
         for player in self.playerEnts:
+            if player._isSpawned:
+                continue
             if defaultPos or i >= numPaths:
                 player.spawn(stdPoint)
             else:
@@ -68,11 +69,11 @@ class playerManager(DirectObject):
         stdPoint.remove_node()
         
     def distribute_players(self, task):
-        server = self.gameObj.lobby.server
-        if self.isHost:
+        server = base.server
+        if base.isHost:
             for player in self.playerEnts:
                 if player.over:
-                    if not self.gameObj.lobby.server.send_direct("expectOveride", self.gameObj.lobby.tracker.get_id(player.name)):
+                    if not server.send_direct("expectOveride", self.gameObj.lobby.tracker.get_id(player.name)):
                         continue#something went wrong here. Potentially flag playerEnt rebuild
                     player.over = False
                 player.interrogate(server)
@@ -95,5 +96,4 @@ class playerManager(DirectObject):
         #TODO:: along with the netTracker rework, it would be good to make some functionality for players to rejoin a game if they dissconnect,
         #so we'd tell netTracker that it's okay to flush disconnected players.
         del self.gameObj#gameObj won't garbage collect if we don't delete
-        del self.isHost
                 

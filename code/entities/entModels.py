@@ -95,8 +95,7 @@ class playerMdlBase(npEnt):
         self.bundle.set_anim_blend_flag(True)
         self.bundle.set_frame_blend_flag(True)
         mnp.set_pos(*pos)
-        kwargs['np'] = mnp
-        super().__init__(**kwargs)#Trick npEnt into holding the root of our model
+        super().__init__(np = mnp, **kwargs)#Trick npEnt into holding the root of our model
         
         #Character stuff
         self.controls = {"modelRoot" : AnimControlCollection()}
@@ -116,7 +115,7 @@ class playerMdlBase(npEnt):
                     partCont.store_anim(self.bundle.bind_anim(anim.node().get_bundle(), 0x01 | 0x02 | 0x04, sPart), anim.node().get_bundle().get_name())
                 self.controls[part] = partCont#Store the new animControlCollection under the name of the part
                 
-        
+
         self.boneBoxes = []
         for nodeP in self.np.find_all_matches("**/+CollisionNode"):
             nodeP.show()
@@ -127,6 +126,7 @@ class playerMdlBase(npEnt):
                     nodeP.set_p(90)
                 nodeP.node().set_from_collide_mask(BitMask32(0b0000000))
                 nodeP.node().set_into_collide_mask(BitMask32(0b0001000))
+                nodeP.node().modify_solid(0).set_tangible(False)
                 del joint
                 self.boneBoxes.append(nodeP.node())
 

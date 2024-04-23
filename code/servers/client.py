@@ -68,33 +68,33 @@ class clientServer(DirectObject):
         datagram = PyDatagram()
             
         if self.cReader.getData(datagram):
-            try:
-                iterator = PyDatagramIterator(datagram)
-                #Begin processing commands
-                commands = iterator.getString().split(";")
-                for com in commands:
-                    if com == "":
-                        continue
-                    if msgFilterStandard(com):
-                        messenger.send(com)
-                        continue
+            #try:
+            iterator = PyDatagramIterator(datagram)
+            #Begin processing commands
+            commands = iterator.getString().split(";")
+            for com in commands:
+                if com == "":
+                    continue
+                if msgFilterStandard(com):
+                    messenger.send(com)
+                    continue
                             
-                    comInfo = msgFilterValue(com)#Either False or a tuple containing the type of data for this message and how much of it we need
-                    if comInfo:
-                        count = 0
-                        target = comInfo[1]
-                        param = []
-                        while count < target:
-                            param.append(grabberTable[comInfo[0]](iterator))
-                            count += 1
-                        messenger.send(com, param)
-            #'''
+                comInfo = msgFilterValue(com)#Either False or a tuple containing the type of data for this message and how much of it we need
+                if comInfo:
+                    count = 0
+                    target = comInfo[1]
+                    param = []
+                    while count < target:
+                        param.append(grabberTable[comInfo[0]](iterator))
+                        count += 1
+                    messenger.send(com, param)
+            '''
             except:#Something is seriously wrong, no way to fix. have to shut down server.
                 self.shut_down()
                 messenger.send("serverError")
-                print("Massive server error: unindexed address")
+                print("Massive server error while recieving messages!")
                 return True
-            #'''    
+            '''    
                              
         else:
             print("data grab fail")

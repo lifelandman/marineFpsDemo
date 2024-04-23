@@ -1,3 +1,4 @@
+import random
 from direct.showbase.DirectObject import DirectObject
 
 
@@ -8,12 +9,16 @@ from panda3d.core import ModelPool
 
 #our own code
 from .playerMgr import playerManager
+from .rng import randomGen
 from .entities.entModels import spinningModel
 from .worldLoader import loadWorld
+from .weapons.decalMgr import decalMgr
+from.deathMatch import deathMatchLogic
 
 class game_world(DirectObject):#I'll make this a direct object just incase I need it
     def __init__(self, lobby, worldFile = 'models/maps/terrain.egg'):
         self.lobby = lobby
+        base.game_instance = self
 
         super().__init__()
         
@@ -21,7 +26,7 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         #base.enableParticles()
 
         #Create a universal standard of gravity. TODO:: make it so servers can adjust this
-        self.gravity = 0.983
+        #self.gravity = 0.983
 
         #World's collision management
         base.cTrav = CollisionTraverser()
@@ -43,15 +48,20 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
 
         #Put world generation code calls here
         loadWorld(self, worldFile)
+        
+        ###Game tools
+        #rng manager
+        self.rngMgr = randomGen()
+        self.decalMgr = decalMgr()
 
-        #Gamemode logic here:
-        #TODO:: write gamemode logic
-
-        #Spawn Player control logic here: TODO::actually write this, or even rewrite this whole file. most of this is carryover from other project.
+        #Spawn Player control logic here:
         self.playerMgr = playerManager(self)
         
+        #Gamemode logic here:
+        self.logic = deathMatchLogic()
+        
         #logic for syncing game start
-        if self.lobby.isHost:
+        if base.isHost:
             self.readyTester = []
             self.accept('ready', self.ready_recieve)
             self.ready_recieve('host')
@@ -76,8 +86,14 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         
     def destroy(self):
         self.ignoreAll()
+        del base.game_instance
         
         self.playerMgr.delete()
+        del self.playerMgr
+        self.rngMgr.delete()
+        del self.rngMgr
+        self.logic.delete()
+        del self.logic
         
         base.disableParticles()
         
