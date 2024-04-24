@@ -88,8 +88,7 @@ class bulletWeapon(ammoWeapon):
             if not entry.collided():
                 intoNP = entry.get_into_node_path()
                 if entry.get_from_node_path() in hit_bullets:#we can assume that we've gotten past all the first collisions.
-                    #break
-                    pass
+                    break
                 if intoNP.has_net_tag("player"):
                     if intoNP.get_net_tag("player") == self.user.name:
                         continue
