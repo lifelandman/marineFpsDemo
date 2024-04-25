@@ -23,7 +23,7 @@ class hudMgr(DirectObject):
             self._healthCount = intHealth
             self._healthDisplay.set_text(str(self._healthCount))
     
-    def destroy(self):
+    def delete(self):
         self._healthNP.remove_node()
         del self._healthDisplay
         del self._healthNP
