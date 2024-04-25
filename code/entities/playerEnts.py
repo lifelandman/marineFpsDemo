@@ -532,6 +532,10 @@ class clientPlayer(playerEnt):
     def changeWpn(self, val):
         self.wpnMgr.change_weapon(val)
         self._changeWpn = True
+    
+    def take_damage(self, damage: damageTypeBase):
+        super().take_damage(damage)
+        messenger.send(self.name + "health_change")
         
     def die(self, cause):
         super().die(cause)
@@ -609,7 +613,7 @@ class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, 
     def take_damage(self, damage: damageTypeBase):
         super().take_damage(damage)
         if self.health > 0:
-            base.server.add_message("damage{" + self.name)#TODO:: figure this out.
+            base.server.add_message("playerHealthChange{" + self.name, (self.health,))#TODO:: figure this out.
         
     def die(self, cause):
         super().die(cause)
