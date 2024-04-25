@@ -4,7 +4,7 @@ from direct.task import Task
 from direct.showbase.DirectObject import DirectObject
 
 class randomGen(DirectObject):
-    samePeriod = 4#number of frames until we need to generate a new number
+    samePeriod = 3#number of frames until we need to generate a new number
     def __init__(self):
         self.rng = rng(6062002)
         self.rngCount = 0

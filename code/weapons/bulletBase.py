@@ -31,6 +31,9 @@ class bulletWeapon(trgrWait):
     falloffPrime = 0.5
     falloffSec = 0.5
     
+    primeDmgType = bulletDamageType
+    secDmgType = bulletDamageType
+    
     queue = CollisionHandlerQueue()
     
     hasAltFire = False
@@ -101,10 +104,10 @@ class bulletWeapon(trgrWait):
         
 
     def primaryFire(self):
-        self.raycast(bulletDamageType, self.dmgMulPrime, self.falloffPrime)
+        self.raycast(self.primeDmgType, self.dmgMulPrime, self.falloffPrime)
         
     def secondaryFire(self):#this isn't accesible by default
-        self.raycast(bulletDamageType, self.dmgMulSec, self.falloffSec)
+        self.raycast(self.secDmgType, self.dmgMulSec, self.falloffSec)
 
 
     def destroy(self):

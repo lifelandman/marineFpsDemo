@@ -23,7 +23,8 @@ from math import copysign, sqrt, isclose
 from .npEnt import npEnt
 from .playerModel import playerMdl
 from ..weapons.wpnSlots import slotMgr
-from ..weapons.bulletBase import bulletWeapon
+from ..weapons.as_wpns import as_default
+#from ..weapons.bulletBase import bulletWeapon
 from ..weapons.damageTypes import damageTypeBase
 
 class playerEnt(npEnt):
@@ -90,7 +91,7 @@ class playerEnt(npEnt):
         
         #Create wpnManager
         self.wpnMgr = slotMgr(self.name)
-        self.wpnMgr.add_weapon(bulletWeapon(user = self))
+        self.wpnMgr.add_weapon(as_default(user = self))
         
         #weapon variables
         self._wpnFire = 0#This tells the interogate function if we've fired on this frame and which fire func we used. Also tells clientPlayer to fire
