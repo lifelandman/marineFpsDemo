@@ -2,6 +2,7 @@
 lensClamp = lambda val: -1 + (val - 1) if val >= 1 else val
 
 from code.weapons.wpnSlots import slotMgr
+from .wpnTrgr import trgrWait
 from .wpnAmmo import ammoWeapon
 from .damageTypes import bulletDamageType, damageTypeBase
 
@@ -10,7 +11,7 @@ from panda3d.core import BitMask32 as BitMask
 from panda3d.core import CollisionHandlerQueue
 from panda3d.core import Mersenne as rng#max 2,147,483,647
 
-class bulletWeapon(ammoWeapon):
+class bulletWeapon(trgrWait):
     maxSpreadX = 4#In degrees
     maxSpreadY = 2.5
     
@@ -88,8 +89,7 @@ class bulletWeapon(ammoWeapon):
             if not entry.collided():
                 intoNP = entry.get_into_node_path()
                 if entry.get_from_node_path() in hit_bullets:#we can assume that we've gotten past all the first collisions.
-                    #break
-                    pass
+                    break
                 if intoNP.has_net_tag("player"):
                     if intoNP.get_net_tag("player") == self.user.name:
                         continue
@@ -113,3 +113,19 @@ class bulletWeapon(ammoWeapon):
         for ray in self.rays:
             ray.remove_node()
         del self.trav
+        
+
+'''#tested example of implementing ammoWeapon functionality:
+class ammoBulletTest(bulletWeapon, ammoWeapon):#Note that thanks to python's order of inheritance and super(), nothing breaks here
+    clipSize = 1
+    loadWait = 1
+    
+    
+    def activate(self, mgr: slotMgr):
+        super().activate(mgr)
+        print('activated')
+    
+    def clip_change(self, goal, taskObj):
+        print('reloading')
+        return super().clip_change(goal, taskObj)
+'''
