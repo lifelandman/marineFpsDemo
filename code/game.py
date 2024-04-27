@@ -13,6 +13,7 @@ from .rng import randomGen
 from .entities.entModels import spinningModel
 from .worldLoader import loadWorld
 from .weapons.decalMgr import decalMgr
+from .hud import hudMgr
 from.deathMatch import deathMatchLogic
 
 class game_world(DirectObject):#I'll make this a direct object just incase I need it
@@ -50,9 +51,10 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         loadWorld(self, worldFile)
         
         ###Game tools
-        #rng manager
         self.rngMgr = randomGen()
         self.decalMgr = decalMgr()
+        self.hudMgr = hudMgr()
+        
 
         #Spawn Player control logic here:
         self.playerMgr = playerManager(self)
@@ -94,6 +96,8 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         del self.rngMgr
         self.logic.delete()
         del self.logic
+        self.hudMgr.delete()
+        del self.hudMgr
         
         base.disableParticles()
         

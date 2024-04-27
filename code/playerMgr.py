@@ -36,6 +36,7 @@ class playerManager(DirectObject):
             newP.add_colliders(base.cTrav, self.gameObj.handler)
             self.clientEnt = newP
             self.playerEnts.append(newP)
+            base.game_instance.hudMgr.register_player(newP)
         else:
             newP = hostNetPlayer(name = name) if base.isHost else clientNetPlayer(name = name)
             newP.add_colliders(base.cTrav, self.gameObj.handler)

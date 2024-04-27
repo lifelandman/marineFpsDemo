@@ -22,7 +22,7 @@ from math import copysign, sqrt, isclose
 ###ours:
 from .npEnt import npEnt
 from .playerModel import playerMdl
-from ..weapons.wpnSlots import slotMgr
+from ..weapons.wpnSlots import slotMgr, slotWeapon
 from ..weapons.as_wpns import as_default
 #from ..weapons.bulletBase import bulletWeapon
 from ..weapons.damageTypes import damageTypeBase
@@ -91,7 +91,7 @@ class playerEnt(npEnt):
         
         #Create wpnManager
         self.wpnMgr = slotMgr(self.name)
-        self.wpnMgr.add_weapon(as_default(user = self))
+        self.add_weapon(as_default, user = self)
         
         #weapon variables
         self._wpnFire = 0#This tells the interogate function if we've fired on this frame and which fire func we used. Also tells clientPlayer to fire
@@ -344,6 +344,9 @@ class playerEnt(npEnt):
         self.de_spawn()
         messenger.send("death", [self.name, cause])
         
+    def add_weapon(self, wpnType, **kwargs):#See clientPlayer for why we might want to override this
+        self.wpnMgr.add_weapon(wpnType(**kwargs))
+        
     ####################
     #Management Methods#
     ####################        
@@ -532,11 +535,18 @@ class clientPlayer(playerEnt):
     def changeWpn(self, val):
         self.wpnMgr.change_weapon(val)
         self._changeWpn = True
+    
+    def take_damage(self, damage: damageTypeBase):
+        super().take_damage(damage)
+        messenger.send(self.name + "health_change")
         
     def die(self, cause):
         super().die(cause)
         if base.isHost:
             base.server.add_message("kill{" + self.name, (cause,))
+            
+    def add_weapon(self, wpnType, **kwargs):
+        super().add_weapon(wpnType, **kwargs, isClient = True)
         
     
     def update(self, task = None):#TODO:: add a function inside slotMgr that checks if active weapon is a triggerWpn
@@ -609,7 +619,7 @@ class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, 
     def take_damage(self, damage: damageTypeBase):
         super().take_damage(damage)
         if self.health > 0:
-            base.server.add_message("damage{" + self.name)#TODO:: figure this out.
+            base.server.add_message("playerHealthChange{" + self.name, (self.health,))#TODO:: figure this out.
         
     def die(self, cause):
         super().die(cause)
