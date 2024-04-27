@@ -4,7 +4,7 @@ from direct.showbase.DirectObject import DirectObject
 from direct.task import Task
 
 class deathMatchLogic(DirectObject):
-    spawnWaveLen = 20
+    spawnWaveLen = 12
 
     def __init__(self):
         self.accept("death", self.reap)
