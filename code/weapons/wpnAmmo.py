@@ -14,7 +14,7 @@ class ammoWeapon(trgrWait):
     
     manual_reload = True#False if this can only reload on empty clip, like DODS m1
     
-    def __init__(self, **kwargs):
+    def __init__(self, isClient = False, **kwargs):
         self._clip = self.clipSize
         self._storage = self.storageMax
         
@@ -24,13 +24,23 @@ class ammoWeapon(trgrWait):
         self._isBuffering = False
         self._bufferType = False
         
+        if isClient:
+            self.doingHud = True
+            self.hudRef = base.game_instance.hudMgr
+        else:
+            self.doingHud = False
+        
         super().__init__(**kwargs)
         
     def activate(self, mgr: slotMgr):
         if self.manual_reload: self.accept('reload{' + mgr.playerName, self.trigger_reload)
+        self.hud_ammo_update()
         super().activate(mgr)
         
     def de_activate(self, mgr: slotMgr):
+        if self._isReloading:
+            self.remove_task("reload")
+            self._isBuffering = False
         if self.manual_reload: self.ignore('reload{' + mgr.playerName)
         super().de_activate(mgr)
         
@@ -44,6 +54,7 @@ class ammoWeapon(trgrWait):
                 self._fireReady = False
                 self.begin_count(self.wait)
                 self._clip -= self.primAmnt
+                self.hud_ammo_update()
         elif self._isReloading:
             self.queue_fire_buffer(False)
             
@@ -57,6 +68,7 @@ class ammoWeapon(trgrWait):
                 self._fireReady = False
                 self.begin_count(self.subWait)
                 self._clip -= self.secAmnt
+                self.hud_ammo_update()
         elif self._isReloading:
             self.queue_fire_buffer(True)
     
@@ -81,6 +93,7 @@ class ammoWeapon(trgrWait):
             else:
                 self._clip = self._storage
                 self._storage = 0
+            self.hud_ammo_update()
             self._fireReady = True
             self._isReloading = False
             if self._fireBuffer and self._isBuffering:
@@ -101,23 +114,18 @@ class ammoWeapon(trgrWait):
         self._storage = other._storage
         super().copy()
         
+    
+    def hud_ammo_update(self):
+        if self.doingHud:
+            self.hudRef.get_ammo_count(str(self._clip) + "/" + str(self._storage))
+
+        
     def destroy(self):
         del self._isReloading
         del self._clip
         del self._storage
         super().destroy()
         
-
-class ammoTest(ammoWeapon):
     
-    secAmnt = 0
-    
-    def primaryFire(self):
-        print(self._clip, self._storage)
         
-    def secondaryFire(self):
-        print('secFire')
-    
-    def clip_change(self, goal, taskObj):
-        if taskObj.time >= goal: print('reloaded')
-        return super().clip_change(goal, taskObj)
+

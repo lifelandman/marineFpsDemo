@@ -27,7 +27,10 @@ class slotWeapon(weaponBase):
         if self._isActive: self.de_activate()
         super().destroy()
 
-
+    #To be overriden, to avoid crashes
+    def string_ammo(self):
+        return ''
+    
 
 from panda3d.core import BitMask16
 class slotMgr():
@@ -154,3 +157,9 @@ class slotMgr():
         del self.actWpn
         del self._activeSlot
         del self._subSlot
+        
+'''
+class clientSlotMgr(slotMgr):
+    pass
+'''
+        
