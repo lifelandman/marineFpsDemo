@@ -60,24 +60,30 @@ class lobby_ui(DirectObject):
                 self.delete()
         
     
-    def connect_player(self, name, pid):#TODO:: see if hostlist can make this more efficient.
+    def connect_player(self, name, pid, version):
+        if version != base.version:
+            base.server.kick(int(pid))
+            return
+
         if self.tracker.join_player(name, int(pid)):
-            self.server.send_direct("alias", int(pid), (name, pid))
+            base.server.send_direct("alias", int(pid), (name, pid))
         else:#try and find a different name
             newName = name + "<" + str(pid)
             if self.tracker.join_player(newName, int(pid)):
                 self.server.send_direct("alias", int(pid), (newName, pid))
-                x = []
-                players = self.tracker.get_players()
-                for name, index in players:
-                    x.append(name)
-                    x.append(str(index))
-                while len(x) < 8:
-                    x.append('')
-                x = tuple(x)
-                self.server.add_message('hostList', x)
             else:
-                self.server.kick(int(pid))
+                base.server.kick(int(pid))
+                
+        x = []
+        players = self.tracker.get_players()
+        for name, index in players:
+            x.append(name)
+            x.append(str(index))
+        while len(x) < 8:
+            x.append('')
+        x = tuple(x)
+        base.server.add_message('hostList', x)
+        
         if self.in_menu:
             self.clear_player_list()
             self.make_player_list()
@@ -96,7 +102,7 @@ class lobby_ui(DirectObject):
             self.make_player_list()
         
     def introduce(self, memVal):
-        self.server.add_message("connect", (ConfigVariableString('my-name', "player").get_string_value(), memVal))
+        self.server.add_message("connect", (ConfigVariableString('my-name', "player").get_string_value(), memVal, base.version))
         self.acceptOnce("alias", self.accept_alias)
 
     def accept_alias(self, name, memVal):

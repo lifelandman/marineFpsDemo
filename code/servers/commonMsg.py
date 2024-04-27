@@ -13,7 +13,7 @@ valueMsg = {
     "name":("string", 1),#player name
     "hostList":("string", 8),#Alternate player name and id
     "introduce":("string", 1),#yourself. TODO:: add int message support
-    "connect":("string",2),#first value is name, second value is index of player. Indicies are not numbers if local to server.
+    "connect":("string",3),#first value is name, second value is index of player. Indicies are not numbers if local to server.
     "alias":("string", 2),#ofical name and id.
     "disconnect":("string", 1),
     "playMap":("string", 1),

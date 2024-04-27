@@ -8,13 +8,13 @@ class hudMgr(DirectObject):
         self._healthDisplay = TextNode("health")
         self._healthCount = 0
         self._healthNP = base.a2dBottomRight.attach_new_node(self._healthDisplay)
-        self._healthNP.set_scale(0.4)
-        self._healthNP.set_pos(-0.7,0,0.1)
+        self._healthNP.set_scale(0.2)
+        self._healthNP.set_pos(-0.35,0,0.03)
         
         self._ammoDisplay = TextNode("ammo")
         self._ammoNP = base.a2dBottomLeft.attach_new_node(self._ammoDisplay)
-        self._ammoNP.set_scale(0.4)
-        self._ammoNP.set_pos(0,0,0.1)
+        self._ammoNP.set_scale(0.2)
+        self._ammoNP.set_pos(0,0,0.05)
     
     def register_player(self, player):
         self._player = player

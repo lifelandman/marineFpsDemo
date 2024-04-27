@@ -4,11 +4,16 @@ from code.main_menu import menu_ui
 
 
 class game(ShowBase):
+    
+    version = '.1'#This is used by lobby to prevent connection between diffrent game versions. of course.
+    
+
     def __init__(self, indirectStart = True):
         ShowBase.__init__(self)
         load_prc_file("gameConfig.prc")
         self.optionPage = load_prc_file("options.prc")#Need a handle on this ConfigPage for saving modifications to it
         base.disableMouse()
+        
         
         #load_prc_file("gameConfig.prc")
 
