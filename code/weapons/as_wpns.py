@@ -8,7 +8,7 @@ class as_default(bulletWeapon, ammoWeapon):
     wait = 0.2
     
     ##ammo:
-    loadWait = 1.5
+    loadWait = 0.45
     clipSize = 10
     storageMax = 120
     
@@ -26,3 +26,11 @@ class as_default(bulletWeapon, ammoWeapon):
     dmgMulPrime = 0.7
     falloffPrime = 0.3
     
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        base.game_instance.audio.register_sound_source(self.user.name + "as_default", self.user.np, "reload")
+    
+    def trigger_reload(self):
+        if not (self._isReloading or self._counting or self._storage <= 0 or self._clip == self.clipSize):
+            base.game_instance.audio.play(self.user.name +"as_default", "reload")
+        super().trigger_reload()
