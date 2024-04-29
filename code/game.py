@@ -9,11 +9,15 @@ from panda3d.core import ModelPool
 
 #our own code
 from .playerMgr import playerManager
-from .rng import randomGen
-from .entities.entModels import spinningModel
+
+#from .entities.entModels import spinningModel
 from .worldLoader import loadWorld
+
+from .rng import randomGen
 from .weapons.decalMgr import decalMgr
 from .hud import hudMgr
+from .audio.audioTriggerGlobal import audioTrgrGlobal
+
 from.deathMatch import deathMatchLogic
 
 class game_world(DirectObject):#I'll make this a direct object just incase I need it
@@ -54,6 +58,7 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         self.rngMgr = randomGen()
         self.decalMgr = decalMgr()
         self.hudMgr = hudMgr()
+        self.audio = audioTrgrGlobal()
         
 
         #Spawn Player control logic here:
