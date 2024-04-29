@@ -460,7 +460,8 @@ class clientPlayer(playerEnt):
     def de_spawn(self):
         super().de_spawn()
         self.camera.reparent_to(base.render)
-        self.toggle_inputs()
+        if self._inputActive:
+            self.toggle_inputs()
         self.removeAllTasks()#Carefull!
     
     #Defining button inputs as member variables. (same among all instances.)

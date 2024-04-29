@@ -228,6 +228,9 @@ class lobby_ui(DirectObject):
         if self.in_menu == True:
             self.clear_menu()
             self.in_menu = False
+            scSize = base.win.getProperties()
+            xSize, ySize = scSize.get_x_size() // 2, scSize.get_y_size() // 2
+            base.win.movePointer(0, xSize, ySize)
         elif self.in_menu == False:
             self.build_menu()
             self.in_menu = True
