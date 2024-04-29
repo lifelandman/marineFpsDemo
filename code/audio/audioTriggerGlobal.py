@@ -3,12 +3,11 @@ from direct.showbase.Audio3DManager import Audio3DManager
 from direct.task import Task
 from panda3d.core import AudioManager
 
-from .subAudio import audioTrgrBullet
+from .subAudio import soundGrabber
 
 class audioTrgrGlobal(DirectObject):
     def __init__(self):
-        self.audioTrgrs = []
-        self.audioTrgrs.append(audioTrgrBullet())
+        self.audioTrgr = soundGrabber()#ignore the outdated variable name
         
         self.audio3DList = []
         self.audioMgrList = []
@@ -36,11 +35,9 @@ class audioTrgrGlobal(DirectObject):
         for arg in args:
             if i > 15:
                 break
-            for trgr in self.audioTrgrs:
-                if arg in trgr.sounds.keys():
-                    soundDict[arg] = trgr.register(manager3d, np, arg)
-                    i +=1
-                    break
+            if arg in self.audioTrgr.sounds.keys():
+                soundDict[arg] = self.audioTrgr.register(manager3d, np, arg)
+                i +=1
         return self.audioMgrList.index(manager)
         
 

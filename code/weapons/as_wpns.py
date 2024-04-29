@@ -28,7 +28,11 @@ class as_default(bulletWeapon, ammoWeapon):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        base.game_instance.audio.register_sound_source(self.user.name + "as_default", self.user.np, "reload")
+        base.game_instance.audio.register_sound_source(self.user.name + "as_default", self.user.np, "reload", "defaultShot")
+    
+    def primaryFire(self):
+        super().primaryFire()
+        base.game_instance.audio.play(self.user.name + "as_default", "defaultShot")
     
     def trigger_reload(self):
         if not (self._isReloading or self._counting or self._storage <= 0 or self._clip == self.clipSize):

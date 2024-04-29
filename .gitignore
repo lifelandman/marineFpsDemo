@@ -12,6 +12,7 @@
 *.blend1
 
 build/*
+models/sounds/sources/*
 
 /*.exe
 /*.deb
