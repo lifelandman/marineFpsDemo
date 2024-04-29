@@ -7,6 +7,9 @@ this file prioritises actually transforming nodepaths to accomedate the model fo
 from panda3d.core import DirectionalLight, AmbientLight
 #collision
 from panda3d.core import BitMask32
+#water
+from panda3d.core import CardMaker
+from panda3d.core import Shader
 
 def loadWorld(game, worldFile):
     game.world = base.loader.load_model(worldFile)
@@ -18,10 +21,34 @@ def loadWorld(game, worldFile):
         game.world.set_collide_mask(BitMask32(0b1000000))
     else:
         for nodeP in collisionNodes:
-            nodeP.set_collide_mask(BitMask32(0b1000000))
+            if not nodeP.has_tag("isWater"):
+                nodeP.set_collide_mask(BitMask32(0b1000000))
     del collisionNodes
     #TODO:: add plane for falling out of the world
+    
+    waterNodes = game.world.find_all_matches("**/=isWater")
+    print(waterNodes)
+    cm = CardMaker('waterSurface')
+    shader = Shader.load(Shader.SL_GLSL, vertex = 'shaders/dayWaterVert.vert', fragment = 'shaders/dayWaterFrag.frag')
+    waterTex = loader.loadTexture('images/waterNormal.jpg')
+
+    for nodeP in waterNodes:
+        if not nodeP.node().is_collision_node():
+            continue
+        solid = nodeP.node().get_solid(0)
+        center = solid.get_center()
+        dimensions = solid.get_dimensions()
+        hori = dimensions.x/2
+        verti = dimensions.y/2
+        cm.set_frame(-hori, hori, -verti, verti)
+        surface = nodeP.attach_new_node(cm.generate())
         
+        surface.set_pos(center.x, center.y, center.z + dimensions.z/2)
+        surface.set_p(-90)
+        surface.show_through()
+        
+        surface.set_texture(waterTex)
+        surface.set_shader(shader)
 
     #set up lighting
     base.render.set_shader_auto()
