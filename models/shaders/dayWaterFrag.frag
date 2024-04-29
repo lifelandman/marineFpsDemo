@@ -99,6 +99,8 @@ void main()
   newColor.rgb *= shadow;
   
   }
+  newColor.w = clamp((newColor.x + newColor.y + newColor.z) /3, 0.4, 1);
+  //newColor.w = 0.3;
 
 p3d_fragColor = newColor;
 }

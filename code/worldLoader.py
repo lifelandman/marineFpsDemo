@@ -23,11 +23,12 @@ def loadWorld(game, worldFile):
         for nodeP in collisionNodes:
             if not nodeP.has_tag("isWater"):
                 nodeP.set_collide_mask(BitMask32(0b1000000))
+            else:
+                nodeP.set_collide_mask(BitMask32(0b0100000))
     del collisionNodes
     #TODO:: add plane for falling out of the world
     
     waterNodes = game.world.find_all_matches("**/=isWater")
-    print(waterNodes)
     cm = CardMaker('waterSurface')
     shader = Shader.load(Shader.SL_GLSL, vertex = 'shaders/dayWaterVert.vert', fragment = 'shaders/dayWaterFrag.frag')
     waterTex = loader.loadTexture('images/waterNormal.jpg')
@@ -49,6 +50,11 @@ def loadWorld(game, worldFile):
         
         surface.set_texture(waterTex)
         surface.set_shader(shader)
+        surface.set_transparency(1)
+    del cm
+    del shader
+    del waterTex
+    del waterNodes
 
     #set up lighting
     base.render.set_shader_auto()
