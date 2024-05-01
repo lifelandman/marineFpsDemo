@@ -45,6 +45,10 @@ class playerEnt(npEnt):
         self.accept(self.name + "-into-ground", self.tangible_collide_into_event)
         self.accept(self.name + "-out-ground", self.tangible_collide_out_event)
         self.accept(self.name + "-again-ground", self.tangible_collide_again_event)
+        
+        self.accept(self.name + "-into-water", self.water_collide_into_event)
+        self.accept(self.name + "-out-water", self.water_collide_out_event)
+        self.accept(self.name + "-again-water", self.water_collide_again_event)
 
         #Create bounding box
         cNode = CollisionNode(self.name + '_bounding_box')
@@ -64,6 +68,7 @@ class playerEnt(npEnt):
         cNode.set_from_collide_mask(BitMask32(0b0100000))
         cNode.set_into_collide_mask(BitMask32(0b0000000))#No into collisions
         self.wBall = self.np.attach_new_node(cNode)
+        self.wBall.set_tag("waterBal", "t")
         del cNode
         ##TODO::: assign bitmasks to above collisionNodes
         
@@ -117,6 +122,7 @@ class playerEnt(npEnt):
         #physics
         self.velocity = Vec3(0,0,0)
         self._isAirborne = False
+        self._isSwim = False
         
         self.wBall.show()
         #self.bBox.show()
@@ -162,7 +168,8 @@ class playerEnt(npEnt):
     def update(self, task = None):
         ##########Part 1: calculate the half-frame change in velocity
         deltaTime = globalClock.get_dt()
-        self.velocity_half_update(deltaTime)
+        if not self._isSwim: self.velocity_half_update(deltaTime) 
+        else: self.swim_half_update(deltaTime)
         ##########Part 2: Perform Movement calculations
         self.np.set_pos(self.np, self.velocity)
         
@@ -193,7 +200,8 @@ class playerEnt(npEnt):
         
         ##########Part 3: calculate the second-half-frame velocity change
         avgRate = globalClock.get_average_frame_rate()#this is a prediction for how long the next frame will be
-        self.velocity_half_update(1/avgRate)#divide 1 by avgRate to get estimated next frame time
+        if not self._isSwim: self.velocity_half_update(1/avgRate)#divide 1 by avgRate to get estimated next frame time
+        else: self.swim_half_update(1/avgRate)
         #Easy as that, right?
         if task:
             return Task.cont
@@ -204,9 +212,9 @@ class playerEnt(npEnt):
         scalar should be deltatime for first half, average frame rate for second
         '''
         if self._isAirborne:#changing z velocity is a bad idea if we're touching the ground.
-            self.velocity.add_z(-((8*scalar)/2))#Subtract vertical velocity for half a frame. #TODO:: if you want weight modifiers, add them here.#8 is gravity
+            self.velocity.add_z(-((4*scalar)/2))#Subtract vertical velocity for half a frame. #TODO:: if you want weight modifiers, add them here.#8 is gravity
         elif self._wantJump:
-            self.velocity.add_z(sqrt(3)/2)
+            self.velocity.add_z(sqrt(1.5)/2)
             
         speedLimit = 20#maximum horizontal speed
         walkAccel = 2#acceleration while walking per second
@@ -253,6 +261,56 @@ class playerEnt(npEnt):
                 self.velocity.add_x(-copysign(friction, self.velocity.get_x())*scalar / 2)
             elif not self._xMove and self.velocity.get_x() != 0:
                 self.velocity.set_x(0)
+                
+
+    def swim_half_update(self, scalar):##TODO:: see if this can be put back into main half update. this is kinda a stupid hack.
+        if self._wantJump:
+            self.velocity.add_z(((0.7*scalar)/2))
+        else:
+            self.velocity.add_z(-((0.5*scalar)/2))
+            
+        speedLimit = 30#maximum horizontal speed
+        swimAccel = 2.5#acceleration while walking per second
+        friction = 1.2#deceleration/acceleration resistance per second. If velocity in a direction is less than this, velocity is stopped in a short period of time
+        
+        ##Adjust values
+        if not (self._yMove or self._xMove): friction *= 2
+        exceedControlSpeed = self.velocity.get_xy().length() <= speedLimit
+        #Y velosity calculations
+        if self._yMove != 0:
+            if exceedControlSpeed:
+                if abs(self.velocity.get_y() + self._yMove) < abs(self.velocity.get_y()):
+                    self.velocity.add_y(copysign(min(abs(self.velocity.get_y()), 10), self._yMove)/2)#instantly reverse momentum
+                else:
+                    self.velocity.add_y((self._yMove*swimAccel*scalar)/2)
+                    
+        if abs(self.velocity.get_y()) > speedLimit:
+            val = self.velocity.get_y()
+            self.velocity.set_y(copysign(speedLimit, val))#cap velocity at abs 20
+            del val
+            
+        if abs(self.velocity.get_y()) > 0.2:#Add friction
+            self.velocity.add_y(-copysign(friction, self.velocity.get_y())*scalar / 2)
+        elif not self._yMove and self.velocity.get_y() != 0:
+            self.velocity.set_y(0)
+                
+        #X velosity calculations
+        if self._xMove != 0:
+            if exceedControlSpeed:
+                if abs(self.velocity.get_x() + self._xMove) < abs(self.velocity.get_x()):
+                    self.velocity.add_x(copysign(min(abs(self.velocity.get_x()), 10), self._xMove)/2)#instantly reverse momentum
+                else:
+                    self.velocity.add_x((self._xMove*swimAccel*scalar)/2)
+                    
+        if abs(self.velocity.get_x()) > speedLimit:
+            val = self.velocity.get_x()
+            self.velocity.set_x(copysign(speedLimit, val))#cap velocity at abs 20
+            del val
+            
+        if abs(self.velocity.get_x()) > 0.2:#Add friction
+            self.velocity.add_x(-copysign(friction, self.velocity.get_x())*scalar / 2)
+        elif not self._xMove and self.velocity.get_x() != 0:
+            self.velocity.set_x(0)
                 
     ##############
     #BBox changes#
@@ -319,6 +377,17 @@ class playerEnt(npEnt):
     def tangible_collide_out_event(self, entry):
         self._isAirborne = True
         
+
+    def water_collide_into_event(self, entry):
+        self._isSwim = True
+        
+    def water_collide_again_event(self, entry):
+        self._isSwim = True
+        
+    def water_collide_out_event(self, entry):
+        self._isSwim = False
+        
+
     def fire(self, fireVal):
         if fireVal == 1: messenger.send(self.name + "-fire1")
         elif fireVal == 2: messenger.send(self.name + "-fire2")#Inconsistent with elsewhere, but we arn't checking if fireVal is 0 here.

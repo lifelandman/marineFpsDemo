@@ -38,9 +38,13 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         #base.cTrav.setRespectPrevTransform(True)
         self.handler = CollisionHandlerPusher()
         #Add event patterns
-        self.handler.add_in_pattern("%(player)fh%(bBox)fh%(player)ft-into-ground%(water)ix%(trigger)ix")
-        self.handler.add_out_pattern("%(player)fh%(bBox)fh%(player)ft-out-ground%(water)ix%(trigger)ix")
-        self.handler.add_again_pattern("%(player)fh%(bBox)fh%(player)ft-again-ground%(water)ix%(trigger)ix")
+        self.handler.add_in_pattern("%(player)fh%(bBox)fh%(player)ft-into-ground%(isWater)ix%(trigger)ix")
+        self.handler.add_out_pattern("%(player)fh%(bBox)fh%(player)ft-out-ground%(isWater)ix%(trigger)ix")
+        self.handler.add_again_pattern("%(player)fh%(bBox)fh%(player)ft-again-ground%(isWater)ix%(trigger)ix")
+        
+        self.handler.add_in_pattern("%(player)fh%(waterBal)fh%(player)ft-into-water%(isWater)ih%(trigger)ix")
+        self.handler.add_out_pattern("%(player)fh%(waterBal)fh%(player)ft-out-water%(isWater)ih%(trigger)ix")
+        self.handler.add_again_pattern("%(player)fh%(waterBal)fh%(player)ft-again-water%(isWater)ih%(trigger)ix")
         
         '''
         self.handler.set_static_friction_coef(0.99)
@@ -48,8 +52,8 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         self.handler.set_almost_stationary_speed(0.2)
         '''
 
-        self.handler.add_in_pattern('%fn-into')#TODO:: make player collisions more robust, for when we add depth tests for knockback and whatnot.
-        self.handler.add_out_pattern('%fn-out')
+        #self.handler.add_in_pattern('%fn-into')#TODO:: make player collisions more robust, for when we add depth tests for knockback and whatnot.
+        #self.handler.add_out_pattern('%fn-out')
 
         #Put world generation code calls here
         loadWorld(self, worldFile)
