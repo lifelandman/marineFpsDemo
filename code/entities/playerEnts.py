@@ -84,9 +84,11 @@ class playerEnt(npEnt):
         self._rig = NodePath(self.name + "_rig")#this is the axis of pitch rotation for both the raycast LensNode and the camera. We don't just parent the camera to the LensNode because we might want an offset for the bullet origin.
         self._rig.reparent_to(self.np)
         self._rig.set_z(0.9)
+        '''
         m = loader.loadModel('jack')
         m.reparent_to(self._rig)
         m.set_scale(0.5)
+        '''
 
         #self._bulletNode = LensNode(self.name + "_bulletLens", PerspectiveLens())#Weapons will modify these properties when they're set active.
         #self._bulletLens = self._bulletNode.get_lens()
@@ -190,8 +192,9 @@ class playerEnt(npEnt):
             else:
                 self.addTask(self.inCrouchTask, "crouchTask")
                 self._inCrouch = True
-        elif self._isCrouched and not self._wantCrouch:
-            self.uncrouch()
+        elif self._isCrouched:
+            if not self._wantCrouch or self._isSwim:
+                self.uncrouch()
         
         
         #animations
@@ -212,7 +215,7 @@ class playerEnt(npEnt):
         scalar should be deltatime for first half, average frame rate for second
         '''
         if self._isAirborne:#changing z velocity is a bad idea if we're touching the ground.
-            self.velocity.add_z(-((4*scalar)/2))#Subtract vertical velocity for half a frame. #TODO:: if you want weight modifiers, add them here.#8 is gravity
+            self.velocity.add_z(-((4*scalar)/2))#Subtract vertical velocity for half a frame. #TODO:: if you want weight modifiers, add them here.#4 is gravity
         elif self._wantJump:
             self.velocity.add_z(sqrt(1.5)/2)
             
@@ -273,16 +276,18 @@ class playerEnt(npEnt):
         swimAccel = 2.5#acceleration while walking per second
         friction = 1.2#deceleration/acceleration resistance per second. If velocity in a direction is less than this, velocity is stopped in a short period of time
         
+        rigRelative = Vec3(0,0,0)
         ##Adjust values
         if not (self._yMove or self._xMove): friction *= 2
         exceedControlSpeed = self.velocity.get_xy().length() <= speedLimit
-        #Y velosity calculations
-        if self._yMove != 0:
+        
+        ##Y velosity calculations
+        if self._yMove:
             if exceedControlSpeed:
-                if abs(self.velocity.get_y() + self._yMove) < abs(self.velocity.get_y()):
-                    self.velocity.add_y(copysign(min(abs(self.velocity.get_y()), 10), self._yMove)/2)#instantly reverse momentum
-                else:
-                    self.velocity.add_y((self._yMove*swimAccel*scalar)/2)
+                rigRelative.add_y((self._yMove*swimAccel*scalar)/2)
+                    
+        #apply rigRelative to self.velocity
+        self.velocity += self.np.get_relative_vector(self._rig, rigRelative)
                     
         if abs(self.velocity.get_y()) > speedLimit:
             val = self.velocity.get_y()
@@ -291,16 +296,14 @@ class playerEnt(npEnt):
             
         if abs(self.velocity.get_y()) > 0.2:#Add friction
             self.velocity.add_y(-copysign(friction, self.velocity.get_y())*scalar / 2)
-        elif not self._yMove and self.velocity.get_y() != 0:
+        elif not self._yMove and self.velocity.get_y():
             self.velocity.set_y(0)
+            
                 
-        #X velosity calculations
-        if self._xMove != 0:
+        ##X velosity calculations
+        if self._xMove:
             if exceedControlSpeed:
-                if abs(self.velocity.get_x() + self._xMove) < abs(self.velocity.get_x()):
-                    self.velocity.add_x(copysign(min(abs(self.velocity.get_x()), 10), self._xMove)/2)#instantly reverse momentum
-                else:
-                    self.velocity.add_x((self._xMove*swimAccel*scalar)/2)
+                self.velocity.add_x((self._xMove*swimAccel*scalar)/2)
                     
         if abs(self.velocity.get_x()) > speedLimit:
             val = self.velocity.get_x()

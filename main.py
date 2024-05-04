@@ -5,7 +5,7 @@ from code.main_menu import menu_ui
 
 class game(ShowBase):
     
-    version = '.1'#This is used by lobby to prevent connection between diffrent game versions. of course.
+    version = '.2'#This is used by lobby to prevent connection between diffrent game versions. of course.
     
 
     def __init__(self, indirectStart = True):

@@ -75,6 +75,7 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         if base.isHost:
             self.readyTester = []
             self.accept('ready', self.ready_recieve)
+            self.accept('disconnect', self.ready_recieve)
             self.ready_recieve('host')
         else:
             self.accept('gameStart', self.game_start)

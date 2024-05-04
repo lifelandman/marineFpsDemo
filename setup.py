@@ -4,9 +4,9 @@ setup(
     name='mn9mml-prototype',
     options={
         'build_apps': {
-            # Build asteroids.exe as a GUI application
+
             'gui_apps': {
-                'mn9mml-prototype': 'main.py',
+                'aqua shift alpha': 'main.py',
             },
 
             # Set up output logging, important for GUI apps!
@@ -17,14 +17,17 @@ setup(
             'include_patterns': [
                 '**/*.jpg',
                 '**/*.egg',
-                '*.prc'
+                '**/*.prc',
+                '**/*.wav',
+                '**/*.frag',
+                '**/*.vert'
             ],
-            'file_handlers': {
-                '.egg': lambda x,y,z: None
+            'exclude_patterns': {
+                'models/maps/*'
             },
             
             'include_modules':{
-                'mn9mml-prototype': ['direct.particles.ParticleManagerGlobal', 'direct.showbase.PhysicsManagerGlobal']
+                
                 },
             
 
