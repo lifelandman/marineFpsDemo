@@ -83,7 +83,7 @@ class playerMdlBase(npEnt):
     
     npOursOverrideable = True
     
-    modelPath = 'player1'
+    modelPath = 'newplayer'
     
     def __init__(self, np, pos = (0,0,0), **kwargs):
         mnp = loader.loadModel(self.modelPath, self.modelLoadOps)
@@ -187,7 +187,7 @@ class playerMdlBase(npEnt):
     
 
     def destroy(self):
-        for key in self.controls:
+        for key in self.controls.keys():
             cont = self.controls[key]
             cont.stop_all()
         del self.controls

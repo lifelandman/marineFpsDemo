@@ -90,7 +90,7 @@ void main()
 
   //if (abs(diffuseIntensity) > 0.99) {newColor = vec4(0.95, 0.9, 1.0, 1.0); break;}
 
-  vec4 diffuseTemp = vec4( clamp( vec3(0.7, 0.7, 0.97) * p3d_LightSource[i].color.rgb * diffuseIntensity, 0,1), 0.0);
+  vec4 diffuseTemp = vec4( clamp( vec3(0.6, 0.6, 0.6) * p3d_LightSource[i].color.rgb * diffuseIntensity, 0, 1), 0.0);
   newColor = clamp(newColor + diffuseTemp, vec4(0), vec4(1));
 
   float shadow = textureProj
@@ -99,7 +99,7 @@ void main()
   newColor.rgb *= shadow;
   
   }
-  newColor.w = clamp((newColor.x + newColor.y + newColor.z) /3, 0.4, 1);
+  newColor.w = clamp((newColor.x + newColor.y + newColor.z) /3, 0.7, 1);
   //newColor.w = 0.3;
 
 p3d_fragColor = newColor;

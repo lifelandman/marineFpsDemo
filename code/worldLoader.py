@@ -51,6 +51,7 @@ def loadWorld(game, worldFile):
         surface.set_texture(waterTex)
         surface.set_shader(shader)
         surface.set_transparency(1)
+        surface.set_two_sided(True)
     del cm
     del shader
     del waterTex
@@ -63,6 +64,7 @@ def loadWorld(game, worldFile):
     game.sunNp = base.render.attach_new_node(sun)
     game.sunNp.setHpr(-30, -60, 0)
     base.render.set_light(game.sunNp)
+    
         
     sun = AmbientLight("ambient Light")
     sun.setColor((0.2, 0.2, 0.2, 1))

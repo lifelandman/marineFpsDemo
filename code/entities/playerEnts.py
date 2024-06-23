@@ -83,7 +83,7 @@ class playerEnt(npEnt):
         '''
         self._rig = NodePath(self.name + "_rig")#this is the axis of pitch rotation for both the raycast LensNode and the camera. We don't just parent the camera to the LensNode because we might want an offset for the bullet origin.
         self._rig.reparent_to(self.np)
-        self._rig.set_z(0.9)
+        self._rig.set_z(0.95)
         '''
         m = loader.loadModel('jack')
         m.reparent_to(self._rig)
@@ -199,7 +199,7 @@ class playerEnt(npEnt):
         
         #animations
         self.model.set_look(self._rig.get_p())
-        self.model.walk(self._xMove, self._yMove)
+        #self.model.walk(self._xMove, self._yMove)
         
         ##########Part 3: calculate the second-half-frame velocity change
         avgRate = globalClock.get_average_frame_rate()#this is a prediction for how long the next frame will be
@@ -342,7 +342,7 @@ class playerEnt(npEnt):
             
     def uncrouch(self):
         self.bBox.node().set_solid(0,self.bBSolids[0])
-        self._rig.set_z(0.9)
+        self._rig.set_z(0.95)
         if self._isAirborne:
             self.np.set_z(self.np, -1)
         self._isCrouched = False
@@ -728,7 +728,7 @@ class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seem
         if self.pDat:
             self._yMove = self.pDat[0]
             self._xMove = self.pDat[1]
-            self.model.walk(self._xMove, self._yMove)
+            #self.model.walk(self._xMove, self._yMove)
             
             self._wantJump = self.pDat[2]
             self._wantCrouch = self.pDat[3]

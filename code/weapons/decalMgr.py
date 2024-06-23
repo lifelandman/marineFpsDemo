@@ -29,6 +29,7 @@ class decalMgr():
         decal = self.decals[self._active_decal]
         decal.reparent_to(target)
         decal.set_pos(entry.get_surface_point(target))
+        decal.set_scale(base.render, 1)
         normal = entry.get_surface_normal(target)
         decal.set_hpr(0,0,0)#Reset rotation since we're doing a relative transformation
         decal.look_at(decal, -normal)
