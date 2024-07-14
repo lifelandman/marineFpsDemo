@@ -1,10 +1,10 @@
 from .entModels import playerMdlBase
 
 class playerMdl(playerMdlBase):
-    parts = {"torso" : (("base",),("*.hip",)),
-             "legs" : (("base",),("abdomen",)),
+    parts = {"torso" : (("base",),("*.hip", "*.ikfoot")),
+             "legs" : (("base","*.toes", "*.ikfoot"),("abdomen","weapon")),
              "l.arm" : (("l.shoulder",),()),
-             "r.arm" : (("r.shoulder",),()),
+             "r.arm" : (("r.shoulder","weapon"),()),
              "weapon" : (("weapon",),())
              }
 
@@ -13,8 +13,6 @@ class playerMdl(playerMdlBase):
         
         ##Variables
         #Running
-        self.stepFrame = 0
-        self.carryOverStp = False
         #looking
         self.lookVertical = True#False/0: no animations for looking up or down
         #Animation name holders
@@ -43,73 +41,62 @@ class playerMdl(playerMdlBase):
     def walk(self, x:float, y:float):
         #TODO:: only cause syncwalk at end of function once
         idleTest = 0
-        scale = abs(x) + abs(y)
+        
+        scaleX = abs(x)
+        scaleY = abs(y)
+        totScale = scaleX+scaleY
+        if totScale > 1:
+            scaleX = scaleX/totScale
+            scaleY = scaleY/totScale
+        del totScale
+        
         gotFrame = False
         
         if y != 0:
             if y > 0:
-                if self.carryOverStp:
-                    self.pose("run", "legs", 1, self.stepFrame)
-                    self.stop('backRun', 'legs')
-                else:
-                    if self.loop("run", "legs", 1.0):
-                        self.stop("backRun", "legs")
-                        self.stepFrame = self.get_frame('run', 'legs')
-                        self.gotFrame = True
+                if self.loop("run", "legs", scaleY):
+                    self.stop("backrun", "legs")
+                    self.stepFrame = self.get_frame('run', 'legs')
             else:#No need to run another check, we know this is the case
-                if self.carryOverStp:
-                    self.pose("backRun", "legs", 1, self.stepFrame)
+                if self.loop("backrun", "legs", scaleY):
                     self.stop("run", "legs")
-                else:
-                    if self.loop("backRun", "legs", 1.0):
-                        self.stop("run", "legs")
-                        self.stepFrame = self.get_frame('backRun', 'legs')
-                        self.gotFrame = True
 
         else:
             if not self.stop("run", "legs"):
-                self.stop("backRun", "legs")
+                self.stop("backrun", "legs")
             idleTest += 1
             
-
-        if self.carryOverStp: self.carryOverStp = False
-
         
         if x != 0:
             if x > 0:
-                if gotFrame:
-                    self.pose('strideR', 'legs', 1, self.stepFrame)
-                    self.stop("strideL", "legs")
+                if self.is_playing("run", "legs") or self.is_playing("backrun", "legs"):
+                    self.loop('strafeR', 'legs', scaleX, self.get_available_frame("legs", "run", "backrun"))
+                    self.stop("strafeL", "legs")
                 else:
-                    if self.loop("strideR", "legs", 1.0):
-                        self.stop("strideL", "legs")
-                        self.stepFrame = self.get_frame('strideR', 'legs')
-                        self.carryOverStp = True
+                    if self.loop("strafeR", "legs", scaleX):
+                        self.stop("strafeL", "legs")
             else:#No need to run another check, we know this is the case
-                if gotFrame:
-                    self.pose('strideL', 'legs', 1, self.stepFrame)
-                    self.stop("strideR", "legs")
+                if self.is_playing("run", "legs") or self.is_playing("backrun", "legs"):
+                    self.loop('strafeL', 'legs', scaleX, self.get_available_frame("legs", "run", "backrun"))
+                    self.stop("strafeR", "legs")
                 else:
-                    if self.loop("strideL", "legs", 1.0):
-                        self.stop("strideR", "legs")
-                        self.stepFrame = self.get_frame('strideL', 'legs')
-                        self.carryOverStp = True
+                    if self.loop("strafeL", "legs", scaleX):
+                        self.stop("strafeR", "legs")
                     
         else:
-            if not self.stop("strideR", "legs"):
-                self.stop("strideL", "legs")
+            if not self.stop("strafeR", "legs"):
+                self.stop("strafeL", "legs")
             idleTest += 1            
 
 
         if idleTest >= 2:
-            self.loop("idle", "legs")
-            self.stepFrame = 0
+            self.loop("idleDefault", "legs")
         else:
-            self.stop('idle', 'legs')
+            self.stop('idleDefault', 'legs')
             
 
     anim_sets = {
-        "default" : {"idle": ("idleDefault","idleDefaultUp","idleDefaultDown"), "run": ("defaultrun",)}
+        "default" : {"idle": ("idleDefault","idleDefaultUp","idleDefaultDown"), "run": ("defaultrun","defaultbackrun")}
         }
     
     def set_anim_set(self, anim_set):

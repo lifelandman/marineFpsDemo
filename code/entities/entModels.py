@@ -131,20 +131,27 @@ class playerMdlBase(npEnt):
                 self.boneBoxes.append(nodeP.node())
 
 
-    def play(self, name:str, part:str = "modelRoot", blend:float = 1):
+    def play(self, name:str, part:str = "modelRoot", blend:float = 1, start:int = None):
         control = self.controls[part].find_anim(name)
         if not control.is_playing():
-            control.play()
+            if not start:
+                control.play()
+            else:
+                control.play(start, control.get_num_frames()-1)
             self.check_blend(control, blend)
             return True
         elif not self.check_blend(control, blend):
             return False
         return True
     
-    def loop(self, name:str, part:str = "modelRoot", blend:float = 1):
+    def loop(self, name:str, part:str = "modelRoot", blend:float = 1, start:int = None):
         control = self.controls[part].find_anim(name)
         if not control.is_playing():
-            control.loop(True)
+            if not start:
+                control.loop(True)
+            else:
+                control.pose(start)
+                control.loop(False)
             self.check_blend(control, blend)
             return True
         elif not self.check_blend(control, blend):
@@ -184,6 +191,18 @@ class playerMdlBase(npEnt):
     def get_frame(self, name:str, part:str):
         control = self.controls[part].find_anim(name)
         return control.get_frame()
+    
+    def get_available_frame(self, part:str, *animNames):
+        val = 0
+        for animName in animNames:
+            if self.is_playing(animName, part):
+                val = self.get_frame(animName, part)
+                break
+        return val
+    
+    def is_playing(self, name:str, part:str):#this is for higher level animation code
+        control = self.controls[part].find_anim(name)
+        return control.is_playing()
     
 
     def destroy(self):

@@ -83,12 +83,12 @@ class playerEnt(npEnt):
         '''
         self._rig = NodePath(self.name + "_rig")#this is the axis of pitch rotation for both the raycast LensNode and the camera. We don't just parent the camera to the LensNode because we might want an offset for the bullet origin.
         self._rig.reparent_to(self.np)
-        self._rig.set_z(0.95)
-        '''
+        self._rig.set_z(1.55)
+        #'''
         m = loader.loadModel('jack')
         m.reparent_to(self._rig)
-        m.set_scale(0.5)
-        '''
+        m.set_scale(0.23)
+        #'''
 
         #self._bulletNode = LensNode(self.name + "_bulletLens", PerspectiveLens())#Weapons will modify these properties when they're set active.
         #self._bulletLens = self._bulletNode.get_lens()
@@ -127,7 +127,7 @@ class playerEnt(npEnt):
         self._isSwim = False
         
         self.wBall.show()
-        #self.bBox.show()
+        self.bBox.show()
         
         #bBox
         self._inCrouch = False#Are we doing the crouching animation?
@@ -138,6 +138,7 @@ class playerEnt(npEnt):
         #Health
         self.health = self.maxHealth
         self.health_changed = False
+        loader.load_model("newplayer").reparent_to(base.render)
     
     def add_colliders(self, trav, handler):
         trav.add_collider(self.bBox, handler)
@@ -199,7 +200,7 @@ class playerEnt(npEnt):
         
         #animations
         self.model.set_look(self._rig.get_p())
-        #self.model.walk(self._xMove, self._yMove)
+        self.model.walk(self._xMove, self._yMove)
         
         ##########Part 3: calculate the second-half-frame velocity change
         avgRate = globalClock.get_average_frame_rate()#this is a prediction for how long the next frame will be
@@ -329,7 +330,7 @@ class playerEnt(npEnt):
             self.uncrouch()
             self._inCrouch = False
             return Task.done
-        self._rig.set_z(-0.1 + (1- (time/0.35)))
+        self._rig.set_z(-0.1 + (1.5- (time/0.35)))
         return Task.cont
         
     
@@ -342,7 +343,7 @@ class playerEnt(npEnt):
             
     def uncrouch(self):
         self.bBox.node().set_solid(0,self.bBSolids[0])
-        self._rig.set_z(0.95)
+        self._rig.set_z(1.55)
         if self._isAirborne:
             self.np.set_z(self.np, -1)
         self._isCrouched = False
@@ -728,7 +729,7 @@ class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seem
         if self.pDat:
             self._yMove = self.pDat[0]
             self._xMove = self.pDat[1]
-            #self.model.walk(self._xMove, self._yMove)
+            self.model.walk(self._xMove, self._yMove)
             
             self._wantJump = self.pDat[2]
             self._wantCrouch = self.pDat[3]
