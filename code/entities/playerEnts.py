@@ -8,7 +8,7 @@ All the "player" classes.
 from panda3d.core import NodePath
 #collision:
 from panda3d.core import CollisionNode, CollisionBox, CollisionSphere
-from panda3d.core import Point3, Vec3
+from panda3d.core import Point3, Vec3, Vec2
 from panda3d.core import BitMask32
 #Bullet raytracing:
 #from panda3d.core import LensNode, PerspectiveLens
@@ -218,54 +218,69 @@ class playerEnt(npEnt):
         if self._isAirborne:#changing z velocity is a bad idea if we're touching the ground.
             self.velocity.add_z(-((4*scalar)/2))#Subtract vertical velocity for half a frame. #TODO:: if you want weight modifiers, add them here.#4 is gravity
         elif self._wantJump:
-            self.velocity.add_z(sqrt(1.5)/2)
+            self.velocity.add_z(sqrt(1.1)/2)
             
-        speedLimit = 20#maximum horizontal speed
-        walkAccel = 2#acceleration while walking per second
+        ##Begin xy velocity
+        velo2d = abs(self.velocity.get_xy().length())
+            
+        speedLimit = 1.5#maximum horizontal speed
+        speedToLimit = speedLimit - velo2d
+        absoluteLimit = 3
+        walkAccel = speedLimit if speedToLimit/speedLimit >= 0.98 else speedToLimit * 4
         airAccel = 0.5#acceleration while in air per second
-        friction = 0.85#deceleration/acceleration resistance per second. If velocity in a direction is less than this, velocity is stopped in a short period of time
+        friction = 1.05#deceleration/acceleration resistance per second. If velocity in a direction is less than this, velocity is stopped in a short period of time
         
         ##Adjust values
-        if not (self._yMove or self._xMove): friction *= 2
-        exceedControlSpeed = self.velocity.get_xy().length() < 10
+        if (not (self._yMove or self._xMove)): friction *= 2
+        elif self.velocity.length() > speedLimit: friction *= 4
+        notExceedSpeedLimit = velo2d < speedLimit
+        
+            
+        #Velocity Calculations
         #Y velosity calculations
-        if self._yMove != 0:
-            if not self._isAirborne and exceedControlSpeed:
+        if self._yMove:
+            if not self._isAirborne and notExceedSpeedLimit:
                 if abs(self.velocity.get_y() + self._yMove) < abs(self.velocity.get_y()):
-                    self.velocity.add_y(copysign(min(abs(self.velocity.get_y()), 10), self._yMove)/2)#instantly reverse momentum
+                    self.velocity.add_y(copysign(min(abs(self.velocity.get_y()), speedLimit), self._yMove)/2)#instantly reverse momentum
                 else:
-                    self.velocity.add_y((self._yMove*walkAccel*scalar)/2)
+                    change = (( self._yMove * walkAccel ) * scalar)/2
+                    self.velocity.add_y(change)
+                    del change
             elif self._isAirborne:#note we don't cap velocity while in air
                 self.velocity.add_y((self._yMove*airAccel*scalar)/2)
-        if abs(self.velocity.get_y()) > 20:
-            val = self.velocity.get_y()
-            self.velocity.set_y(copysign(20, val))#cap velocity at abs 20
-            del val
+                
+        #X velosity calculations
+        if self._xMove:
+            if not self._isAirborne and notExceedSpeedLimit:
+                if abs(self.velocity.get_x() + self._xMove) < abs(self.velocity.get_x()):
+                    self.velocity.add_x(copysign(min(abs(self.velocity.get_x()), speedLimit), self._xMove)/2)
+                else:
+                    change = (( self._xMove * walkAccel ) * scalar)/2
+                    self.velocity.add_x(change)
+                    del change
+            elif self._isAirborne:#note we don't cap velocity while in air
+                self.velocity.add_x((self._xMove*airAccel*scalar)/2)
+        
+        #Velocity Cap
+        if self.velocity.get_xy().length() > absoluteLimit:
+            self.velocity.set_y((self.velocity.get_xy().normalized() * absoluteLimit).get_y())
+            self.velocity.set_x((self.velocity.get_xy().normalized() * absoluteLimit).get_x())
+        
+        
+        #Friction
+        #Y
         if not self._isAirborne:#extra stuff for only on the ground
             if abs(self.velocity.get_y()) > 0.2:#Add friction
                 self.velocity.add_y(-copysign(friction, self.velocity.get_y())*scalar / 2)
             elif not self._yMove and self.velocity.get_y() != 0:
                 self.velocity.set_y(0)
-                
-        #X velosity calculations
-        if self._xMove != 0:
-            if not self._isAirborne and exceedControlSpeed:
-                if abs(self.velocity.get_x() + self._xMove) < abs(self.velocity.get_x()):
-                    self.velocity.add_x(copysign(min(abs(self.velocity.get_x()), 10), self._xMove)/2)
-                else:
-                    self.velocity.add_x((self._xMove*walkAccel*scalar)/2)
-            elif self._isAirborne:#note we don't cap velocity while in air
-                self.velocity.add_x((self._xMove*airAccel*scalar)/2)
-        if abs(self.velocity.get_x()) > 20:
-            val = self.velocity.get_x()
-            self.velocity.set_x(copysign(20, val))#cap velocity at abs 20
-            del val
+        #X
         if not self._isAirborne:#extra stuff for only on the ground
             if abs(self.velocity.get_x()) > 0.2:#Add friction
                 self.velocity.add_x(-copysign(friction, self.velocity.get_x())*scalar / 2)
             elif not self._xMove and self.velocity.get_x() != 0:
-                self.velocity.set_x(0)
-                
+                self.velocity.set_x(0)    
+            
 
     def swim_half_update(self, scalar):##TODO:: see if this can be put back into main half update. this is kinda a stupid hack.
         if self._wantJump:
@@ -578,8 +593,10 @@ class clientPlayer(playerEnt):
     
     def get_inputs_keys(self, task):#We need a diffrent function if we ever want to add controller support
         poller = base.mouseWatcherNode
+        
         self._yMove = poller.is_button_down(self.key_for) - poller.is_button_down(self.key_bak)
         self._xMove = poller.is_button_down(self.key_right) - poller.is_button_down(self.key_left)
+        
         self._wantJump = poller.is_button_down(self.key_jump)
         self._wantCrouch = poller.is_button_down(self.key_crouch)
         

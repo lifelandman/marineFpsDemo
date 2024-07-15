@@ -17,7 +17,7 @@ class game(ShowBase):
         
         #load_prc_file("gameConfig.prc")
 
-        globalClock.set_average_frame_rate_interval(1.0)
+        globalClock.set_average_frame_rate_interval(0.5)
 
         #messenger.toggleVerbose()
         self.setFrameRateMeter(True)
