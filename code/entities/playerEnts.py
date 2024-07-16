@@ -180,10 +180,10 @@ class playerEnt(npEnt):
         self.np.set_h(self.np, self._hRot)#TODO:: This is insecure against aimhacking.
         #Rotate velocity
         turn = Quat()
-        turn.set_from_axis_angle(-self._hRot, self.upVec)
-        self.velocity = Vec3(turn.xform(self.velocity))
+        turn.set_from_axis_angle(self._hRot, self.upVec)
+        turn.xform(self.velocity)
         #Calculate pitch
-        if (self._pRot != 0) and (abs(self._rig.get_p() + self._pRot) <= 85):
+        if self._pRot != 0 and (abs(self._rig.get_p() + self._pRot) <= 85):
             self._rig.set_p(self._rig, self._pRot)
             
         ##Crouch
