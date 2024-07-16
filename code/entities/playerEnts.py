@@ -526,6 +526,12 @@ class clientPlayer(playerEnt):
             
             props = WindowProperties()#See above.
             props.set_cursor_hidden(True)
+            #reset mouse pos
+            pointer = base.win.get_pointer(0)
+            if pointer.get_in_window():
+                scSize = base.win.getProperties()
+                xSize, ySize = scSize.get_x_size() // 2, scSize.get_y_size() // 2
+                base.win.movePointer(0, xSize, ySize)
             '''
             props.set_mouse_mode(WindowProperties.M_absolute)#see above.
             '''
@@ -617,7 +623,8 @@ class clientPlayer(playerEnt):
         if pointer.get_in_window():#Get mouse movement
             scSize = base.win.getProperties()
             xSize, ySize = scSize.get_x_size() // 2, scSize.get_y_size() // 2
-            self._hRot, self._pRot = -((pointer.get_x() - xSize) // 3) * 0.7, -((pointer.get_y() - ySize) // 3) * 0.7
+            yScalar = xSize/ySize#Try to correct for differences in aspect ratio
+            self._hRot, self._pRot = -((pointer.get_x() - xSize)/2) * 0.4, -((pointer.get_y() - ySize) /(2*yScalar)) * 0.4*yScalar
             base.win.movePointer(0, xSize, ySize)
         else: self._hRot, self._pRot = 0,0
         return Task.cont

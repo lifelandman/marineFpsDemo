@@ -14,6 +14,7 @@ class game(ShowBase):
         self.optionPage = load_prc_file("options.prc")#Need a handle on this ConfigPage for saving modifications to it
         base.disableMouse()
         
+        base.camLens.set_fov(69.3201, 65)
         
         #load_prc_file("gameConfig.prc")
 
