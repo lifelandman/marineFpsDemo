@@ -10,6 +10,7 @@ from panda3d.core import BitMask32
 #water
 from panda3d.core import CardMaker
 from panda3d.core import Shader
+from panda3d.core import TexGenAttrib, TextureStage
 
 def loadWorld(game, worldFile):
     game.world = base.loader.load_model(worldFile)
@@ -52,6 +53,7 @@ def loadWorld(game, worldFile):
         surface.set_shader(shader)
         surface.set_transparency(1)
         surface.set_two_sided(True)
+        surface.set_tex_gen(TextureStage.get_default(), TexGenAttrib.MWorldPosition)
     del cm
     del shader
     del waterTex

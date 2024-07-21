@@ -285,12 +285,14 @@ class playerEnt(npEnt):
     def swim_half_update(self, scalar):##TODO:: see if this can be put back into main half update. this is kinda a stupid hack.
         if self._wantJump:
             self.velocity.add_z(((0.7*scalar)/2))
-        else:
-            self.velocity.add_z(-((0.5*scalar)/2))
+        elif self.velocity.get_z() > -3:
+            self.velocity.add_z(-((0.35*scalar)/2))
+            if self.velocity.get_z() <-3:
+                self.velocity.set_z(-3)
             
         speedLimit = 30#maximum horizontal speed
         swimAccel = 2.5#acceleration while walking per second
-        friction = 1.2#deceleration/acceleration resistance per second. If velocity in a direction is less than this, velocity is stopped in a short period of time
+        friction = 1.6#deceleration/acceleration resistance per second. If velocity in a direction is less than this, velocity is stopped in a short period of time
         
         rigRelative = Vec3(0,0,0)
         ##Adjust values
@@ -371,7 +373,7 @@ class playerEnt(npEnt):
         vector = entry.get_surface_normal(entry.get_from_node_path())#WARNING!! Unapplied rotation transforms like to fuck with this!#TODO:: Figure out what I meant from this.
         if vector.get_z() > 0.6:#(Above comment is copied from code from other project.)
             self._isAirborne = False
-        #TODO:: negate velocity if we run into a wall.
+        self.bend_velocity(vector)
         
     def tangible_collide_again_event(self, entry):
         vector = entry.get_surface_normal(entry.get_from_node_path())
@@ -385,7 +387,7 @@ class playerEnt(npEnt):
             return
         veloVec = self.velocity.normalized()
         angle = veloVec.angle_deg(vector)
-        if vector.get_z() > 0.93:
+        if vector.get_z() > 0.93 and self.velocity.get_z() < 0:
             self.velocity.set_z(0)
         if angle >= 1:
             norDot = vector.dot(self.velocity)
