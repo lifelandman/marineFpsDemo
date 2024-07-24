@@ -8,12 +8,14 @@ at the time of writing, this is in it's own file because it is reasonable to bel
 '''
 
 from panda3d.core import NodePath
-from .entBase import entNamable
+from .entBase import entBase
 
-class npEnt (entNamable):
+class npEnt (entBase):
     
     npOursOverrideable = False#does a subclass of this expect to pass down actually recieved level geometry or a configured model?
     skipAccept = False#Do we even care about any nodepath we were given?
+    
+    acceptCollisions = False# Do we want this entity to care if a player collides with it
     
     def __init__ (self, np: NodePath = None, **kwargs):
         super().__init__(**kwargs)
@@ -26,6 +28,12 @@ class npEnt (entNamable):
             self.npOurs = True#elaborating on above, if this isn't ours it must belong to level geometry or something like that.
             
         self.np.set_python_tag('entOwner', self)#NOTE!!! we cannot have multiple npEnts acting on one np!!!
+        
+        if self.acceptCollisions:#Set tag for all collisionNodes below np
+            collisionNodes = self.np.find_all_matches('**/+CollisionNode')
+            for nodeP in collisionNodes:
+                nodeP.set_tag("collidable ent", self.name)
+            del collisionNodes
         
 
     def destroy(self):

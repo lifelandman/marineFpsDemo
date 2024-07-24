@@ -12,6 +12,7 @@ from .playerMgr import playerManager
 
 #from .entities.entModels import spinningModel
 from .worldLoader import loadWorld
+from .entities.entMgr import entityManager
 
 from .rng import randomGen
 from .weapons.decalMgr import decalMgr
@@ -42,9 +43,15 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         self.handler.add_out_pattern("%(player)fh%(bBox)fh%(player)ft-out-ground%(isWater)ix%(trigger)ix")
         self.handler.add_again_pattern("%(player)fh%(bBox)fh%(player)ft-again-ground%(isWater)ix%(trigger)ix")
         
+        #Collisions with water
         self.handler.add_in_pattern("%(player)fh%(waterBal)fh%(player)ft-into-water%(isWater)ih%(trigger)ix")
         self.handler.add_out_pattern("%(player)fh%(waterBal)fh%(player)ft-out-water%(isWater)ih%(trigger)ix")
         self.handler.add_again_pattern("%(player)fh%(waterBal)fh%(player)ft-again-water%(isWater)ih%(trigger)ix")
+        
+        #Colisions with entities
+        self.handler.add_in_pattern("%(player)fhplayer-in-%(collidable ent)ih%(collidable ent)it")
+        self.handler.add_out_pattern("%(player)fhplayer-out-%(collidable ent)ih%(collidable ent)it")
+        self.handler.add_again_pattern("%(player)fhplayer-again-%(collidable ent)ih%(collidable ent)it")
         
         '''
         self.handler.set_static_friction_coef(0.99)
@@ -57,6 +64,9 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
 
         #Put world generation code calls here
         loadWorld(self, worldFile)
+        
+        #Generate entities
+        self.entityMgr = entityManager()
         
         ###Game tools
         self.rngMgr = randomGen()
@@ -98,8 +108,7 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         
     def destroy(self):
         self.ignoreAll()
-        del base.game_instance
-        
+
         self.playerMgr.delete()
         del self.playerMgr
         self.rngMgr.delete()
@@ -109,6 +118,9 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         self.hudMgr.delete()
         del self.hudMgr
         
+        self.entityMgr.destroy()
+        del self.entityMgr
+                
         base.disableParticles()
         
         base.cTrav.clear_colliders()
@@ -126,3 +138,5 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         self.sunNp.remove_node()
         self.amLNp.remove_node()
         
+
+        del base.game_instance

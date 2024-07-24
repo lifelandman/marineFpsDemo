@@ -5,6 +5,7 @@ All the "player" classes.
 ####Player
 ###panda3d's:
 #General:
+from os import name
 from panda3d.core import NodePath
 #collision:
 from panda3d.core import CollisionNode, CollisionBox, CollisionSphere
@@ -34,6 +35,11 @@ class playerEnt(npEnt):
     ##Player Member Variables:
     maxHealth = 100#We should find a better amount later and have UI translate that to 100 or maybe not
     
+
+    events = (("{name}-into-ground", "tangible_collide_into_event"),("{name}-out-ground", "tangible_collide_out_event"),("{name}-again-ground", "tangible_collide_again_event"),
+              ("{name}-into-water", "water_collide_into_event"),("{name}-out-water", "water_collide_out_event"),("{name}-again-water", "water_collide_again_event"),
+              )
+    
     ##################
     #Creation Methods#
     ##################
@@ -41,14 +47,6 @@ class playerEnt(npEnt):
         super().__init__(**kwargs)#make self.np
         #self.np.set_collide_mask(BitMask32(0b0010000))
         self.np.set_tag('player', self.name)
-        #accept collision events
-        self.accept(self.name + "-into-ground", self.tangible_collide_into_event)
-        self.accept(self.name + "-out-ground", self.tangible_collide_out_event)
-        self.accept(self.name + "-again-ground", self.tangible_collide_again_event)
-        
-        self.accept(self.name + "-into-water", self.water_collide_into_event)
-        self.accept(self.name + "-out-water", self.water_collide_out_event)
-        self.accept(self.name + "-again-water", self.water_collide_again_event)
 
         #Create bounding box
         cNode = CollisionNode(self.name + '_bounding_box')
@@ -107,11 +105,11 @@ class playerEnt(npEnt):
         
         ################Create all instance variables##############
         
-        #Administrative/anti-cheat
-        #self.teleportOk = False#Set this to true if and whenever velosity's big enough or we're teleporting somewhere. If not this and this player moved too far, it's possible that client is trying to lie about present location.
+        ##Administrative/anti-cheat
+        ##self.teleportOk = False#Set this to true if and whenever velosity's big enough or we're teleporting somewhere. If not this and this player moved too far, it's possible that client is trying to lie about present location.
         self._isSpawned = False
         
-        #Movement
+        ##Movement
         self._xMove = 0.0 #float for relatively left/right movement.
         self._yMove = 0.0 #ditto, but for forward/back
         
@@ -121,7 +119,7 @@ class playerEnt(npEnt):
         self._hRot = 0.0 #amount of heading rotation. If we're doing mouse/keys, this is how far along the x axis from the center user has moved cursor.
         self._pRot = 0.0 #pitch rotation. (looking up/down.)
         
-        #physics
+        ##physics
         self.velocity = Vec3(0,0,0)
         self._isAirborne = False
         self._isSwim = False
@@ -129,7 +127,13 @@ class playerEnt(npEnt):
         self.wBall.show()
         self.bBox.show()
         
-        #bBox
+        #Rideables
+        self.riding = None
+        self.timeOffRide = 0
+        self.isRiding = False
+        self.touchingRide = False
+        
+        ##bBox
         self._inCrouch = False#Are we doing the crouching animation?
         self._isCrouched = False
         self._swmFst = False
@@ -159,6 +163,7 @@ class playerEnt(npEnt):
         self._isSpawned = True
     
     def de_spawn(self):
+        self.remove_ride(self.riding)
         self.np.detach_node()#carefull not to lose the class refrence during this time!
         self._isSpawned = False
         
@@ -174,7 +179,17 @@ class playerEnt(npEnt):
         if not self._isSwim: self.velocity_half_update(deltaTime) 
         else: self.swim_half_update(deltaTime)
         ##########Part 2: Perform Movement calculations
+        #Riding
+        if self.isRiding:
+            if self.touchingRide:
+                if self.timeOffRide != 0: self.timeOffRide = 0
+            elif self.timeOffRide >= 4:#Max number of frames before we're sure we're no longer touching the ride
+                self.remove_ride(self.riding)
+            else: self.timeOffRide += 1
+            
+
         self.np.set_pos(self.np, self.velocity)
+        
         
         ##Calculate rotation
         self.np.set_h(self.np, self._hRot)#TODO:: This is insecure against aimhacking.
@@ -236,7 +251,7 @@ class playerEnt(npEnt):
         notExceedSpeedLimit = velo2d < speedLimit
         
             
-        #Velocity Calculations
+        ##Velocity Calculations
         #Y velosity calculations
         if self._yMove:
             if not self._isAirborne and notExceedSpeedLimit:
@@ -267,7 +282,7 @@ class playerEnt(npEnt):
             self.velocity.set_x((self.velocity.get_xy().normalized() * absoluteLimit).get_x())
         
         
-        #Friction
+        ##Friction
         #Y
         if not self._isAirborne:#extra stuff for only on the ground
             if abs(self.velocity.get_y()) > 0.2:#Add friction
@@ -279,7 +294,8 @@ class playerEnt(npEnt):
             if abs(self.velocity.get_x()) > 0.2:#Add friction
                 self.velocity.add_x(-copysign(friction, self.velocity.get_x())*scalar / 2)
             elif not self._xMove and self.velocity.get_x() != 0:
-                self.velocity.set_x(0)    
+                self.velocity.set_x(0)
+                
             
 
     def swim_half_update(self, scalar):##TODO:: see if this can be put back into main half update. this is kinda a stupid hack.
@@ -332,6 +348,32 @@ class playerEnt(npEnt):
             self.velocity.add_x(-copysign(friction, self.velocity.get_x())*scalar / 2)
         elif not self._xMove and self.velocity.get_x() != 0:
             self.velocity.set_x(0)
+            
+                    
+
+    def add_ride(self, ride):
+        self.np.wrt_reparent_to(ride.np)
+
+        self.riding = ride
+        self.isRiding = True
+        
+        self.touchingRide = True
+
+        self.timeOffRides = 0
+        
+        if self.velocity.length() > 1.23:
+            rideTransformMat = self.np.get_mat(ride.np)
+            self.velocity -= rideTransformMat.xformVec(ride.pseudoVelocity)
+    
+    def remove_ride(self, ride):
+        self.np.wrt_reparent_to(base.game_instance.world)
+
+        self.riding = None
+        self.isRiding = False
+        
+        if self.riding == None: return
+        rideTransformMat = self.np.get_mat(ride.np)
+        self.velocity += rideTransformMat.xformVec(ride.pseudoVelocity)
                 
     ##############
     #BBox changes#
@@ -468,8 +510,11 @@ class playerEnt(npEnt):
 
     def destroy(self):
         self.de_spawn()
+        
         self.model.destroy()
         self.wpnMgr.destroy()
+        
+        del self.velocity
         super().destroy()
 
 

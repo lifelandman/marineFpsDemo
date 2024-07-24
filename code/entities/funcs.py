@@ -21,3 +21,82 @@ class funcSpin(npEnt):
     
     turn = 100#how many units to turn per second on average
     
+
+from panda3d.core import Vec3
+class funcRideable(npEnt):
+    
+    acceptCollisions = True
+    
+    events = (("player-in-{name}", "ride"),
+              ("player-out-{name}", "stop_ride"))
+    
+    tasks = (("{name}-ridable update", "update"),)
+    
+    def __init__(self, **kwargs):
+        self.pseudoVelocity = Vec3(0,0,0)
+        
+        self.isGone = False#a variable to alert players that this entity has been destroyed and to remove it from memory.
+        super().__init__(**kwargs)
+        
+    def ride(self, entry):
+        player = entry.get_from_node_path().get_net_python_tag("entOwner")
+        if player.riding == None and not self is player.riding and (entry.get_surface_normal(entry.get_from_node_path()).get_z() > 0.75):
+            player.add_ride(self)
+            player.isRiding = True
+        elif self is player.riding:
+            player.touchingRide = True
+            
+    
+    def stop_ride(self, entry):
+        player = entry.get_from_node_path().get_net_python_tag("entOwner")
+        if self is player.riding:
+            player.touchingRide = False
+    
+    def update(self, taskObj = None):
+        return Task.cont
+        
+    def destroy(self):
+        self.isGone = True
+        return super().destroy()
+    
+
+from math import pi, cos, sin, radians, degrees, atan2
+from panda3d.core import Vec2
+class funcRotateAroundTarget(funcRideable):
+    
+    def __init__(self, target:NodePath, speed:float = 2.0, **kwargs):
+        super().__init__(**kwargs)
+        
+        self._target = target
+        
+        self._speed = speed
+        self._radius = self.np.get_pos(target).length()
+        self._unitDegreeConversion = pi*(self._radius * 2) / 360
+        #self._offset = self.np.get_h(self._target)
+        
+        self._distanceDegrees = degrees( atan2(self.np.get_y(target), self.np.get_x(target)) )
+        #self.update()
+        self.pseudoVelocity = Vec3(0, self._speed, 0)
+        
+    def update(self, taskObj=None):
+        #Move the np
+        dt = globalClock.get_dt()
+        
+        frameDistance = self._speed * dt
+        self._distanceDegrees += frameDistance * self._unitDegreeConversion
+        if self._distanceDegrees > 360: self._distanceDegrees -= 360
+        elif self._distanceDegrees < 0: self._distanceDegrees += 360
+        distanceRad = radians(self._distanceDegrees)
+
+        distancesFromTarget = Vec2(cos(distanceRad), sin(distanceRad))
+        distancesFromTarget *= self._radius
+        self.np.set_pos(self._target, distancesFromTarget.get_x(), distancesFromTarget.get_y(), 0)
+        self.np.set_h(self._target, self._distanceDegrees)
+        
+        #self.pseudoVelocity = Vec3(-sin(distanceRad), cos(distanceRad), 0) * self._speed#set the pseudoVelocity to tangent of the circle * speed# Trying new method that has static pseudoVelocity
+
+        return super().update(taskObj)  
+
+    def destroy(self):
+        del self._target
+        return super().destroy()
