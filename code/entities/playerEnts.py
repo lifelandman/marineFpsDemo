@@ -43,16 +43,23 @@ class playerEnt(npEnt):
     ##################
     #Creation Methods#
     ##################
-    def __init__(self, **kwargs):
+    def __init__(self, team = 0, **kwargs):
         super().__init__(**kwargs)#make self.np
         #self.np.set_collide_mask(BitMask32(0b0010000))
         self.np.set_tag('player', self.name)
+        
+        self.team = team
 
         #Create bounding box
         cNode = CollisionNode(self.name + '_bounding_box')
         self.bBSolids = (CollisionBox(Point3(0,0,0), 1,1,2), CollisionBox(Point3(0,0,-1), 1,1,1))#Diffrent collisionSolids for cNode, 0=normal, 1=crouch, 2=fastSwm
         cNode.add_solid(self.bBSolids[0])
-        cNode.set_from_collide_mask(BitMask32(0b1010101))#TODO:: change this later to have team collision setting
+        match team:
+            case 0: mask = BitMask32(0b1010101)#deathmatch
+            case 1: mask = BitMask32(0b1000101)#Red
+            case 2: mask = BitMask32(0b1010001)#Blue
+            case _: mask = BitMask32(0b1000101)#PVE
+        cNode.set_from_collide_mask(mask)
         self.bBox = self.np.attach_new_node(cNode)
         self.bBox.set_tag('bBox', 't')
         del cNode
@@ -71,7 +78,7 @@ class playerEnt(npEnt):
         ##TODO::: assign bitmasks to above collisionNodes
         
         #Create Model
-        self.model = playerMdl(np = self.np, pos = (0,0,-2))
+        self.model = playerMdl(np = self.np, pos = (0,0,-2), collision_mode = team)
         self.model.np.set_h(180)#I'm doing some alterations here because I'm testing with a model not made for this project
         
         #######WEAPONS#######

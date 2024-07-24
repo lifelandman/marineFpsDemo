@@ -19,7 +19,7 @@ from .weapons.decalMgr import decalMgr
 from .hud import hudMgr
 from .audio.audioTriggerGlobal import audioTrgrGlobal
 
-from.deathMatch import deathMatchLogic
+from .logic.deathMatch import deathMatchLogic
 
 class game_world(DirectObject):#I'll make this a direct object just incase I need it
     def __init__(self, lobby, worldFile = 'models/maps/terrain.egg'):
@@ -76,7 +76,7 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         
 
         #Spawn Player control logic here:
-        self.playerMgr = playerManager(self)
+        self.playerMgr = playerManager()
         
         #Gamemode logic here:
         self.logic = deathMatchLogic()

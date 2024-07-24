@@ -7,6 +7,7 @@ myMsg = [
     "gameStart",
     "expectOveride",#Hey, we've detected a potential teleport, when we report your position next, go there or else.
     "reload",#First numberable myMsg
+    "sortedTeams",
     ]
 
 valueMsg = {
@@ -24,6 +25,7 @@ valueMsg = {
     "changeWpn":("u8int", 2),
     "playerHealthChange":("float64", 1),
     "kill":("string", 1),
+    "changeTeam":("string",2),
     }
 
     

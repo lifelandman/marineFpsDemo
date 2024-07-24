@@ -14,31 +14,37 @@ class playerManager(DirectObject):
         (0.859, 0.3, 0.3)
         )
     
-    def __init__(self, gameObj):
+    def __init__(self):
         clientPlayer.update_keybinds(clientPlayer)
-        self.gameObj = gameObj
+        self.gameObj = base.game_instance
         self.playerEnts = []
         self.clientEnt = None#if we ever add split-screen multiplayer, make this a list.
         self.build_players()
         
     def build_players(self):
         players = self.gameObj.lobby.tracker.get_players()
-        knownPlayerNames = [player.name for player in self.playerEnts]
+        knownPlayerNames = [player.name for player in self.playerEnts]#I think I'm checking this in case we update our list of players when someone new joins
         
         for playername, pid in players:
             if playername in knownPlayerNames:
                 continue
-            else: self.add_player(playername)
+            else:
+                match self.gameObj.lobby.tracker.get_team(playername):
+                    case "deathMatch": team = 0
+                    case "red": team = 1
+                    case "blue": team = 2
+                    case _: team = 3
+                self.add_player(playername, team = team)
             
-    def add_player(self, name):
+    def add_player(self, name, team):
         if name == self.gameObj.lobby.tracker.pid_2_name(self.gameObj.lobby.memVal):#We're the local player. ALSO:: Another thing that needs to change with a rework of netTracker
-            newP = clientPlayer(name = name, camera = base.camera)
+            newP = clientPlayer(name = name, camera = base.camera, team = team)
             newP.add_colliders(base.cTrav, self.gameObj.handler)
             self.clientEnt = newP
             self.playerEnts.append(newP)
             base.game_instance.hudMgr.register_player(newP)
         else:
-            newP = hostNetPlayer(name = name) if base.isHost else clientNetPlayer(name = name)
+            newP = hostNetPlayer(name = name, team = team) if base.isHost else clientNetPlayer(name = name, team = team)
             newP.add_colliders(base.cTrav, self.gameObj.handler)
             self.playerEnts.append(newP)
             

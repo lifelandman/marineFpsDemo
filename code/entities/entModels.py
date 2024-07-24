@@ -85,7 +85,7 @@ class playerMdlBase(npEnt):
     
     modelPath = 'newplayer'
     
-    def __init__(self, np, pos = (0,0,0), **kwargs):
+    def __init__(self, np, pos = (0,0,0), collision_mode = 0, **kwargs):
         mnp = loader.loadModel(self.modelPath, self.modelLoadOps)
         if np != None:
             mnp.reparent_to(np)#We hijack the np parameter and use it as our parent
@@ -117,6 +117,7 @@ class playerMdlBase(npEnt):
                 
 
         self.boneBoxes = []
+        mask = BitMask32(0b0001000) if collision_mode != 2 else BitMask32(0b0000010)
         for nodeP in self.np.find_all_matches("**/+CollisionNode"):
             nodeP.show()
             if nodeP.has_tag("boneBox"):
@@ -125,10 +126,11 @@ class playerMdlBase(npEnt):
                     joint.add_net_transform(nodeP.node())
                     nodeP.set_p(90)
                 nodeP.node().set_from_collide_mask(BitMask32(0b0000000))
-                nodeP.node().set_into_collide_mask(BitMask32(0b0001000))
+                nodeP.node().set_into_collide_mask(mask)
                 nodeP.node().modify_solid(0).set_tangible(False)
                 del joint
                 self.boneBoxes.append(nodeP.node())
+        del mask
 
 
     def play(self, name:str, part:str = "modelRoot", blend:float = 1, start:int = None):

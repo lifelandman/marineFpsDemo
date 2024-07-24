@@ -50,8 +50,13 @@ class lobby_ui(DirectObject):
         else:
             self.accept("introduce", self.introduce)
             self.accept("kick", self.delete)
+            
             self.accept("exit_session", self.delete)
+            
             self.accept('hostList', self.recieve_players)
+            self.accept("changeTeam", self.tracker.change_team)
+            self.accept("sortedTeams", self.make_player_list)
+
             self.accept('playMap', self.play_map)
             self.server = clientServer(ipAdress)
             base.server = self.server
@@ -154,7 +159,7 @@ class lobby_ui(DirectObject):
         else:
             count = 1
             for player, index in players:
-                name = player.split("<")[0]
+                name = player
                 self.pList.append(self.player_label(name, count))
                 count +=1
                 
@@ -172,12 +177,21 @@ class lobby_ui(DirectObject):
         #Create a label for joining players
         row = ceil(count/2)
         col = count%2
-        return DirectLabel(text = name, parent = self.player_frame, text_scale = 0.09, pos = (0.124 - (col * 0.95), 0, 1.02 -(row*0.12)), frameSize = (-0.465, 0.465, -0.05, 0.05), text_pos = (0,-0.02))
+        match self.tracker.get_team(name):
+            case "red": color = (0.8, 0.3, 0.3, 1)
+            case "blue": color = (0.3, 0.3, 0.8, 1)
+            case _: color = (0.7, 0.345, 0.75, 1)
+        if not self.isHost: name = name.split("<")[0]
+        return DirectLabel(text = name, parent = self.player_frame, text_scale = 0.09, pos = (0.124 - (col * 0.95), 0, 1.02 -(row*0.12)), frameSize = (-0.465, 0.465, -0.05, 0.05), frameColor = color, text_pos = (0,-0.02))
         
     def player_button(self, name, count):#create a button for players; for server host
         row = ceil(count/2)
         col = count%2
-        ret = DirectButton(text = name, parent = self.player_frame, text_scale = 0.09, pos = (0.124 - (col * 0.95), 0, 1.02 -(row*0.12)), frameSize = (-0.465, 0.465, -0.05, 0.05), text_pos = (0,-0.03), command = self.set_options_player, extraArgs = [name,])
+        match self.tracker.get_team(name):
+            case "red": color = (0.8, 0.3, 0.3, 1)
+            case "blue": color = (0.3, 0.3, 0.8, 1)
+            case _: color = (0.7, 0.345, 0.75, 1)
+        ret = DirectButton(text = name, parent = self.player_frame, text_scale = 0.09, pos = (0.124 - (col * 0.95), 0, 1.02 -(row*0.12)), frameSize = (-0.465, 0.465, -0.05, 0.05), frameColor = color, text_pos = (0,-0.03), command = self.set_options_player, extraArgs = [name,])
         return ret
         
     def set_options_player(self, name):
@@ -191,6 +205,12 @@ class lobby_ui(DirectObject):
         self.action_label.setText("map: " + name)
         self.oList = [DirectButton(text = "play", text_scale = 0.09, pos = (-0.826, 0, -0.35), frameSize = (-0.465, 0.465, -0.05, 0.05), text_pos = (0,-0.03), command = self.play_map, extraArgs = [name])
             ]
+        if name[:3] == "wf_":
+            self.tracker.sort_teams_rb()
+            self.make_player_list()
+        else:
+            self.tracker.sort_teams_deathmatch()
+            self.make_player_list()
         
     def make_map_list(self):
         self.clear_map_list()

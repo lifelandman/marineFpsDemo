@@ -10,7 +10,7 @@ class as_default(bulletWeapon, ammoWeapon):
     ##ammo:
     loadWait = 0.45
     clipSize = 10
-    storageMax = 120
+    storageMax = 400
     
     primAmnt = 1
     bufferTime = 0.3

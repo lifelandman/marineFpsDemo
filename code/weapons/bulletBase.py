@@ -7,7 +7,7 @@ from .wpnAmmo import ammoWeapon
 from .damageTypes import bulletDamageType, damageTypeBase
 
 from panda3d.core import CollisionRay, CollisionNode, CollisionTraverser
-from panda3d.core import BitMask32 as BitMask
+from panda3d.core import BitMask32
 from panda3d.core import CollisionHandlerQueue
 from panda3d.core import Mersenne as rng#max 2,147,483,647
 
@@ -44,12 +44,17 @@ class bulletWeapon(trgrWait):
         #create casting rays
         self.rays = []
         count = 0
+        match self.user.team:
+            case 0: mask = BitMask32(0b1001010)#deathmatch
+            case 1: mask = BitMask32(0b1000010)#Red
+            case 2: mask = BitMask32(0b1001000)#Blue
+            case _: mask = BitMask32(0b1000010)#PVE
         while count < self.numBullets:
             cNode = CollisionNode("rayCast")
             cNode.add_solid(CollisionRay(0,0,0,0,1,0))
             self.rays.append(self.user._bulletNP.attach_new_node(cNode))
-            cNode.set_from_collide_mask(BitMask(0b1001010))
-            cNode.set_into_collide_mask(BitMask(0))
+            cNode.set_from_collide_mask(mask)
+            cNode.set_into_collide_mask(BitMask32(0))
             count += 1
         self.trav = CollisionTraverser(self.user.name +"weapon traverser")
         for rayNP in self.rays:
