@@ -43,12 +43,14 @@ class playerEnt(npEnt):
     ##################
     #Creation Methods#
     ##################
-    def __init__(self, team = 0, **kwargs):
+    def __init__(self, team = 0, isHost = False, **kwargs):
         super().__init__(**kwargs)#make self.np
         #self.np.set_collide_mask(BitMask32(0b0010000))
         self.np.set_tag('player', self.name)
         
         self.team = team
+        
+        self.isHostPlayer = isHost#We're the host's clientPlayer, we can skip stuff for networking
 
         #Create bounding box
         cNode = CollisionNode(self.name + '_bounding_box')
@@ -60,6 +62,12 @@ class playerEnt(npEnt):
             case 2: mask = BitMask32(0b1010001)#Blue
             case _: mask = BitMask32(0b1000101)#PVE
         cNode.set_from_collide_mask(mask)
+        match team:
+            case 0: mask = BitMask32(0b0010100)#deathmatch
+            case 1: mask = BitMask32(0b0010000)#Red
+            case 2: mask = BitMask32(0b0000100)#Blue
+            case _: mask = BitMask32(0b0010000)#PVE
+        cNode.set_into_collide_mask(mask)
         self.bBox = self.np.attach_new_node(cNode)
         self.bBox.set_tag('bBox', 't')
         del cNode
@@ -105,6 +113,9 @@ class playerEnt(npEnt):
         self.wpnMgr = slotMgr(self.name)
         self.add_weapon(as_default, user = self)
         
+        #Accept events
+        self.add_network_events()
+        
         #weapon variables
         self._wpnFire = 0#This tells the interogate function if we've fired on this frame and which fire func we used. Also tells clientPlayer to fire
         self._changeWpn = False#Tells interogate function that it needs to serialize a change in selected weapon
@@ -149,13 +160,17 @@ class playerEnt(npEnt):
         #Health
         self.health = self.maxHealth
         self.health_changed = False
-        loader.load_model("newplayer").reparent_to(base.render)
     
     def add_colliders(self, trav, handler):
         trav.add_collider(self.bBox, handler)
         handler.add_collider(self.bBox, self.np)
         trav.add_collider(self.wBall, handler)
         handler.add_collider(self.wBall, self.np)
+        
+    def add_network_events(self):#split off for clarity's sake
+        if not base.isHost:
+            self.accept("addRide{" + self.name, self.add_ride_network)
+            self.accept("removeRide{" + self.name, self.remove_ride)
         
     ##########
     #Spawning#
@@ -170,7 +185,7 @@ class playerEnt(npEnt):
         self._isSpawned = True
     
     def de_spawn(self):
-        self.remove_ride(self.riding)
+        self.remove_ride()
         self.np.detach_node()#carefull not to lose the class refrence during this time!
         self._isSpawned = False
         
@@ -187,12 +202,12 @@ class playerEnt(npEnt):
         else: self.swim_half_update(deltaTime)
         ##########Part 2: Perform Movement calculations
         #Riding
-        if self.isRiding:
+        if base.isHost and self.isRiding:
             if self.touchingRide:
                 if self.timeOffRide != 0: self.timeOffRide = 0
-            elif self.timeOffRide >= 4:#Max number of frames before we're sure we're no longer touching the ride
-                self.remove_ride(self.riding)
-            else: self.timeOffRide += 1
+            elif self.timeOffRide >= 0.2:#Max number of seconds before we're sure we're no longer touching the ride
+                self.remove_ride()
+            else: self.timeOffRide += deltaTime
             
 
         self.np.set_pos(self.np, self.velocity)
@@ -356,10 +371,12 @@ class playerEnt(npEnt):
         elif not self._xMove and self.velocity.get_x() != 0:
             self.velocity.set_x(0)
             
-                    
+           
 
     def add_ride(self, ride):
-        self.np.wrt_reparent_to(ride.np)
+        if ride != self.riding: self.np.wrt_reparent_to(ride.np)
+        #self.np.set_pos(self.np.get_pos(ride.np))
+        #self.np.reparent_to(ride.np)
 
         self.riding = ride
         self.isRiding = True
@@ -368,19 +385,28 @@ class playerEnt(npEnt):
 
         self.timeOffRides = 0
         
-        if self.velocity.length() > 1.23:
+        if self.velocity.length() > 0.3:
             rideTransformMat = self.np.get_mat(ride.np)
             self.velocity -= rideTransformMat.xformVec(ride.pseudoVelocity)
-    
-    def remove_ride(self, ride):
-        self.np.wrt_reparent_to(base.game_instance.world)
+        if base.isHost:
+            base.server.add_message("addRide{" + self.name, (ride.name,))
 
+    def add_ride_network(self, rideName):
+        ride = base.game_instance.entityMgr.get_entity(rideName)
+        if ride and ride != self.riding: self.add_ride(ride)
+    
+    def remove_ride(self):
+        self.np.wrt_reparent_to(base.game_instance.world)
+        
+        if self.riding == None: return
+        rideTransformMat = self.np.get_mat(self.riding.np)
+        self.velocity += rideTransformMat.xformVec(self.riding.pseudoVelocity)
+        
         self.riding = None
         self.isRiding = False
         
-        if self.riding == None: return
-        rideTransformMat = self.np.get_mat(ride.np)
-        self.velocity += rideTransformMat.xformVec(ride.pseudoVelocity)
+        if base.isHost:
+            base.server.add_message("removeRide{" + self.name)
                 
     ##############
     #BBox changes#
@@ -388,7 +414,7 @@ class playerEnt(npEnt):
     
     def inCrouchTask(self, taskobj):
         time = taskobj.time
-        if self._isAirborne or self._isCrouched or time >= 0.35:
+        if self._isAirborne or self._isCrouched or time >= 0.3:
             self._inCrouch = False
             self.crouch()
             return Task.done
@@ -396,7 +422,7 @@ class playerEnt(npEnt):
             self.uncrouch()
             self._inCrouch = False
             return Task.done
-        self._rig.set_z(-0.1 + (1.5- (time/0.35)))
+        self._rig.set_z(-0.1 + (1.5- (time/0.3)))
         return Task.cont
         
     
@@ -520,6 +546,8 @@ class playerEnt(npEnt):
         
         self.model.destroy()
         self.wpnMgr.destroy()
+        
+        if self.isRiding: self.remove_ride()
         
         del self.velocity
         super().destroy()
@@ -736,16 +764,25 @@ class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, 
             self._pRot = self.pDat[5]
             
             self.update()
-            if (self._isAirborne == self.pDat[14]) and (self._isCrouched == self.pDat[15]) and self.np.get_pos().almost_equal(Point3(self.pDat[11],self.pDat[12],self.pDat[13]), 0.05) and isclose(self.pDat[9], self.np.get_h(), rel_tol = 1) and isclose(self.pDat[10], self._rig.get_p(), rel_tol = 1):
+            if ((self._isAirborne == self.pDat[14]) and
+                    (self._isCrouched == self.pDat[15]) and
+                    self.np.get_pos().almost_equal(Point3(self.pDat[11],self.pDat[12],self.pDat[13]), 0.05) and
+                    isclose(self.pDat[9], self.np.get_h(), rel_tol = 1) and
+                    isclose(self.pDat[10], self._rig.get_p(), rel_tol = 1)):
+
                 if self.velocity.almost_equal(Point3(self.pDat[6], self.pDat[7], self.pDat[8]), 0.05):
                     self.velocity.set_x(self.pDat[6])
                     self.velocity.set_y(self.pDat[7])
                     self.velocity.set_z(self.pDat[8])
+                    
                 self.np.set_h(self.pDat[9])
                 self._rig.set_p(self.pDat[10])
                 self.model.set_look(self._rig.get_p())
+                
                 self.np.set_pos(self.pDat[11],self.pDat[12],self.pDat[13],)
+                
                 self._isAirborne = self.pDat[14]
+                
                 if self._isCrouched != self.pDat[15]:
                     if self._isCrouched:
                         self.uncrouch()
@@ -753,7 +790,6 @@ class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, 
                         self.crouch
             else:
                 self.over = True#Force client into accurate position
-
             self.pDat = None
         else: self.update()
         return Task.cont

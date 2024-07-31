@@ -8,6 +8,7 @@ myMsg = [
     "expectOveride",#Hey, we've detected a potential teleport, when we report your position next, go there or else.
     "reload",#First numberable myMsg
     "sortedTeams",
+    "removeRide",
     ]
 
 valueMsg = {
@@ -26,6 +27,8 @@ valueMsg = {
     "playerHealthChange":("float64", 1),
     "kill":("string", 1),
     "changeTeam":("string",2),
+    "addRide":("string",1),
+    "funcRAT set dist":("float64", 1)
     }
 
     

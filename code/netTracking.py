@@ -20,6 +20,13 @@ class netPlayerTracker(DirectObject):
     
     def remove_player(self, index):
         pos = self.ids.index(index)
+        name = self.names[pos]
+        
+        for team in self.teams:
+            if name in self.teams[team]:
+                self.teams[team].remove(name)
+        del name
+
         self.ids.pop(pos)
         self.names.pop(pos)
         

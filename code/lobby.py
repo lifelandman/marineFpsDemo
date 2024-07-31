@@ -146,6 +146,7 @@ class lobby_ui(DirectObject):
         self.action_label.destroy()
 
     def make_player_list(self):
+        if not self.in_menu: return
         self.clear_player_list()
         players = self.tracker.get_players()
         if self.isHost:
@@ -258,12 +259,13 @@ class lobby_ui(DirectObject):
     def delete(self):
         self.clear_menu()
         
-        del base.isHost
         
         if self.gameStart:
             self.game.destroy()
             if self.isHost:
                 self.server.add_message('exit_session')
+                
+        del base.isHost
         
         del base.server
         self.server.shut_down()

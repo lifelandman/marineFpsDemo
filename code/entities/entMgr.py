@@ -34,6 +34,12 @@ class entityManager():
                     self.entities.append(entity)
                 except: print("failed entity initialization")
                 
+    def get_entity(self, entName):
+        for ent in self.entities:
+            if ent.name == entName:
+                return ent
+        return False
+                
 
     def destroy(self):
         for entity in self.entities:

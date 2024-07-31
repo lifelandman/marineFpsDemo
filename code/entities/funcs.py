@@ -35,14 +35,14 @@ class funcRideable(npEnt):
     def __init__(self, **kwargs):
         self.pseudoVelocity = Vec3(0,0,0)
         
+        
         self.isGone = False#a variable to alert players that this entity has been destroyed and to remove it from memory.
         super().__init__(**kwargs)
         
     def ride(self, entry):
         player = entry.get_from_node_path().get_net_python_tag("entOwner")
-        if player.riding == None and not self is player.riding and (entry.get_surface_normal(entry.get_from_node_path()).get_z() > 0.75):
+        if base.isHost and player.riding == None and (entry.get_surface_normal(entry.get_from_node_path()).get_z() > 0.5):
             player.add_ride(self)
-            player.isRiding = True
         elif self is player.riding:
             player.touchingRide = True
             
@@ -74,11 +74,19 @@ class funcRotateAroundTarget(funcRideable):
         self._unitDegreeConversion = pi*(self._radius * 2) / 360
         #self._offset = self.np.get_h(self._target)
         
+        self.got_match = False#If true, we can skip update because we got info from host
+        if not base.isHost: self.accept("funcRAT set dist{" + self.name, self.match_host)
+        
         self._distanceDegrees = degrees( atan2(self.np.get_y(target), self.np.get_x(target)) )
         #self.update()
         self.pseudoVelocity = Vec3(0, self._speed, 0)
         
     def update(self, taskObj=None):
+        #Client-only skip
+        if self.got_match:
+            self.got_match = False
+            return super().update(taskObj
+                                  )
         #Move the np
         dt = globalClock.get_dt()
         
@@ -94,8 +102,14 @@ class funcRotateAroundTarget(funcRideable):
         self.np.set_h(self._target, self._distanceDegrees)
         
         #self.pseudoVelocity = Vec3(-sin(distanceRad), cos(distanceRad), 0) * self._speed#set the pseudoVelocity to tangent of the circle * speed# Trying new method that has static pseudoVelocity
+        
+        if base.isHost: base.server.add_message("funcRAT set dist{" + self.name, (self._distanceDegrees,))
 
-        return super().update(taskObj)  
+        return super().update(taskObj)
+    
+    def match_host(self, dist):
+        self._distanceDegrees = dist
+        self.got_match = True
 
     def destroy(self):
         del self._target

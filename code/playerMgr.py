@@ -38,7 +38,7 @@ class playerManager(DirectObject):
             
     def add_player(self, name, team):
         if name == self.gameObj.lobby.tracker.pid_2_name(self.gameObj.lobby.memVal):#We're the local player. ALSO:: Another thing that needs to change with a rework of netTracker
-            newP = clientPlayer(name = name, camera = base.camera, team = team)
+            newP = clientPlayer(name = name, camera = base.camera, team = team, isHost = (base.game_instance.lobby.tracker.get_id(name) == "host"))
             newP.add_colliders(base.cTrav, self.gameObj.handler)
             self.clientEnt = newP
             self.playerEnts.append(newP)
@@ -83,6 +83,7 @@ class playerManager(DirectObject):
                     if not server.send_direct("expectOveride", self.gameObj.lobby.tracker.get_id(player.name)):
                         continue#something went wrong here. Potentially flag playerEnt rebuild
                     player.over = False
+                    if player.isRiding: server.add_message("addRide{" + player.name, (player.riding.name,))#ensure that the player we're overriding is on same page about their parent
                 player.interrogate(server)
         else:
             self.clientEnt.interrogate(server)
