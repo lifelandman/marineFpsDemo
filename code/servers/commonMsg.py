@@ -28,7 +28,8 @@ valueMsg = {
     "kill":("string", 1),
     "changeTeam":("string",2),
     "addRide":("string",1),
-    "funcRAT set dist":("float64", 1)
+    "funcRAT set dist":("float64", 1),
+    "playerWpn access change":("bool", 1),
     }
 
     

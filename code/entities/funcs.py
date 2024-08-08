@@ -7,6 +7,8 @@ directory:
 
 from .npEnt import *
 from direct.task import Task
+
+from math import degrees
 ######################MOVEMENT FUNCS#######################
 
 class funcSpin(npEnt):
@@ -21,6 +23,82 @@ class funcSpin(npEnt):
     
     turn = 100#how many units to turn per second on average
     
+
+from math import atan2
+class funcLadder(npEnt):
+    acceptCollisions = True
+    
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        npH = self.np.get_h()
+        if npH < 0: npH = 360 + npH
+        #print(self.name)
+        
+    events = (("player-in-{name}", "in_player"), ("player-out-{name}", "out_player"))
+    
+    def in_player(self, entry):
+        #Calc angle
+        player = entry.get_from_node_path().get_net_python_tag("entOwner")
+        player.onLadder = True
+        player.ladder = self.np
+        
+    def out_player(self, entry):
+        #print("out ladder")
+        player = entry.get_from_node_path().get_net_python_tag("entOwner")
+        if player.onLadder and player.ladder == self.np:
+            player.ladder = None
+            player.onLadder = False
+
+
+from ..weapons.damageTypes import healingDamageType
+from panda3d.core import BitMask32
+class funcHealing(npEnt):
+    acceptCollisions = True
+    
+    events = (("player-again-{name}", "heal"),)
+    
+    def __init__(self, healAmnt = 3, **kwargs):
+        super().__init__(**kwargs)
+        
+        cNodePaths= self.np.find_all_matches("**/+CollisionNode")
+        for cNodePath in cNodePaths:
+            node = cNodePath.node()
+            if node.get_solid(0).is_tangible():
+                node.set_into_collide_mask(BitMask32(0b0100001))#Change bitmask so player bBox can collide
+                
+        if self.np.node().is_collision_node:
+            self.np.node().set_into_collide_mask(BitMask32(0b0100001))
+        
+        self.healAmnt = healAmnt#Amount to heal per second
+    
+    def heal(self, entry):
+        dt = globalClock.get_dt()
+        if entry.get_from_node_path().has_net_python_tag("entOwner"):
+            player = entry.get_from_node_path().get_net_python_tag("entOwner")
+            heal = healingDamageType(self.name)
+            heal.calc_over_time(self.healAmnt, dt)
+            player.take_damage(heal)
+    
+
+class funcDisableWeapons(npEnt):
+    acceptCollisions = True
+    events = (("player-in-{name}", "disable"),
+              ("player-out-{name}", "enable")
+              )
+    
+    
+    def disable(self, entry):
+        player = entry.get_from_node_path().get_net_python_tag("entOwner")
+        player.wpnMgr.disable_weapons()
+        if base.isHost:
+            base.server.add_message("playerWpn access change{" + player.name, (False,))
+            
+    def enable(self, entry):
+        player = entry.get_from_node_path().get_net_python_tag("entOwner")
+        player.wpnMgr.enable_weapons()
+        if base.isHost:
+            base.server.add_message("playerWpn access change{" + player.name, (True,))
+
 
 from panda3d.core import Vec3
 class funcRideable(npEnt):
@@ -60,7 +138,7 @@ class funcRideable(npEnt):
         return super().destroy()
     
 
-from math import pi, cos, sin, radians, degrees, atan2
+from math import pi, cos, sin, radians, atan2
 from panda3d.core import Vec2
 class funcRotateAroundTarget(funcRideable):
     
@@ -85,8 +163,7 @@ class funcRotateAroundTarget(funcRideable):
         #Client-only skip
         if self.got_match:
             self.got_match = False
-            return super().update(taskObj
-                                  )
+            return super().update(taskObj)
         #Move the np
         dt = globalClock.get_dt()
         

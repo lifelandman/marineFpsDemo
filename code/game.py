@@ -20,6 +20,7 @@ from .hud import hudMgr
 from .audio.audioTriggerGlobal import audioTrgrGlobal
 
 from .logic.deathMatch import deathMatchLogic
+from .logic.wf import warfareLogic
 
 class game_world(DirectObject):#I'll make this a direct object just incase I need it
     def __init__(self, lobby, worldFile = 'models/maps/terrain.egg'):
@@ -79,7 +80,8 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         self.playerMgr = playerManager()
         
         #Gamemode logic here:
-        self.logic = deathMatchLogic()
+        if worldFile.split("_")[0] == "wf": self.logic = warfareLogic()
+        else: self.logic = deathMatchLogic()
         
         #logic for syncing game start
         if base.isHost:

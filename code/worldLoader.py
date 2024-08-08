@@ -23,7 +23,11 @@ def loadWorld(game, worldFile):
     else:
         for nodeP in collisionNodes:
             if not nodeP.has_tag("isWater"):
-                nodeP.set_collide_mask(BitMask32(0b1000000))
+                if nodeP.node().get_solid(0).is_tangible():
+                    nodeP.set_collide_mask(BitMask32(0b1000000))
+                else:
+                    nodeP.set_collide_mask(BitMask32(0b0000001))
+                    nodeP.set_tag("trigger", "")
             else:
                 nodeP.set_collide_mask(BitMask32(0b0100000))
     del collisionNodes
@@ -37,6 +41,9 @@ def loadWorld(game, worldFile):
     for nodeP in waterNodes:
         if not nodeP.node().is_collision_node():
             continue
+        solid = nodeP.node().modify_solid(0)
+        solid.set_tangible(False)
+        
         solid = nodeP.node().get_solid(0)
         center = solid.get_center()
         dimensions = solid.get_dimensions()
@@ -66,6 +73,7 @@ def loadWorld(game, worldFile):
     game.sunNp = base.render.attach_new_node(sun)
     game.sunNp.setHpr(-30, -60, 0)
     base.render.set_light(game.sunNp)
+    
     
         
     sun = AmbientLight("ambient Light")

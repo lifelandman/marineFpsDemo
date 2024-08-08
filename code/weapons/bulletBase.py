@@ -101,7 +101,7 @@ class bulletWeapon(trgrWait):
                 if intoNP.has_net_tag("player"):
                     if intoNP.get_net_tag("player") == self.user.name:
                         continue
-                    damage = damageType(intoNP.get_net_tag("player"), self.user.name)
+                    damage = damageType(self.user.name)
                     damage.calc_from_rayCast(entry, mul = mul, falloff = falloff)
                     intoNP.find_net_tag("player").get_net_python_tag('entOwner').take_damage(damage)
                 else: base.game_instance.decalMgr.decal_from_bullet_ray(intoNP, entry)

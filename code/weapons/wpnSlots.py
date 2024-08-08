@@ -46,6 +46,8 @@ class slotMgr():
         
         self.actWpn = None
         
+        self._weaponsEnabled = True
+        
         self.playerName = playerName#storing this so weapons can set up unique events if need be.
         #Especially important for collisions/ the weapon needs to be able to know what collisions it needs to process.
         
@@ -63,6 +65,8 @@ class slotMgr():
         
 
     def change_weapon(self, amnt: int):#amnt should be 1 or -1
+        if not self._weaponsEnabled: return#Skip the function if we're in a weapons forbidden zone
+        
         slotLen = len(self._slots[self._activeSlot]) - 1
         potenSubSlot = self._subSlot + amnt
         if slotLen > 0 and potenSubSlot <= (slotLen):
@@ -104,7 +108,8 @@ class slotMgr():
         self.activate_weapon(wpn)
         
 
-    def goto_slot(self, slotNum):
+    def goto_slot(self, slotNum):#Intended to be used for selecting weapons by number keys
+        if not self._weaponsEnabled: return
         if not self._slotMask.get_bit(slotNum): return
         slot = self._slots[slotNum]
         
@@ -118,6 +123,7 @@ class slotMgr():
         self.activate_weapon(wpn)
         
     def goto_subSlot(self, slotNum, subNum):
+        if not self._weaponsEnabled: return False
         if not self._slotMask.get_bit(slotNum): return False
         if slotNum == self._activeSlot and subNum == self._subSlot: return False
         slot = self._slots[slotNum]
@@ -139,6 +145,17 @@ class slotMgr():
         self.actWpn = wpn
         self.actWpn.activate(self)
         
+        
+    def disable_weapons(self):
+        if self._weaponsEnabled:
+            self._weaponsEnabled = False
+            self.actWpn.de_activate(self)
+        
+    def enable_weapons(self):
+        if not self._weaponsEnabled:
+            self._weaponsEnabled = True
+            self.actWpn.activate(self)
+
 
     def get_slots(self):
         slot = self.actWpn.slot

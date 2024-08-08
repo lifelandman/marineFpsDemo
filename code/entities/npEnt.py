@@ -31,6 +31,7 @@ class npEnt (entBase):
         
         if self.acceptCollisions:#Set tag for all collisionNodes below np
             collisionNodes = self.np.find_all_matches('**/+CollisionNode')
+            if self.np.node().is_collision_node(): collisionNodes.add_path(self.np)
             for nodeP in collisionNodes:
                 nodeP.set_tag("collidable ent", self.name)
             del collisionNodes

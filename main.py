@@ -15,6 +15,7 @@ class game(ShowBase):
         base.disableMouse()
         
         base.camLens.set_fov(69.3201, 65)
+        base.camLens.set_near(0.5)
         
         #load_prc_file("gameConfig.prc")
 

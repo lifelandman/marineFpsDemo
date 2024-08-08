@@ -8,7 +8,7 @@ All the "player" classes.
 from os import name
 from panda3d.core import NodePath
 #collision:
-from panda3d.core import CollisionNode, CollisionBox, CollisionSphere
+from panda3d.core import CollisionNode, CollisionBox, CollisionSphere, CollisionCapsule
 from panda3d.core import Point3, Vec3, Vec2
 from panda3d.core import BitMask32
 #Bullet raytracing:
@@ -54,7 +54,7 @@ class playerEnt(npEnt):
 
         #Create bounding box
         cNode = CollisionNode(self.name + '_bounding_box')
-        self.bBSolids = (CollisionBox(Point3(0,0,0), 1,1,2), CollisionBox(Point3(0,0,-1), 1,1,1))#Diffrent collisionSolids for cNode, 0=normal, 1=crouch, 2=fastSwm
+        self.bBSolids = (CollisionCapsule(0,0,-1, 0,0,1, 1.15), CollisionCapsule(0,0,-1, 0,0,0, 1.15))#Diffrent collisionSolids for cNode, 0=normal, 1=crouch, 2=fastSwm
         cNode.add_solid(self.bBSolids[0])
         match team:
             case 0: mask = BitMask32(0b1010101)#deathmatch
@@ -137,6 +137,8 @@ class playerEnt(npEnt):
         self._hRot = 0.0 #amount of heading rotation. If we're doing mouse/keys, this is how far along the x axis from the center user has moved cursor.
         self._pRot = 0.0 #pitch rotation. (looking up/down.)
         
+        self._collidingNps = []
+        
         ##physics
         self.velocity = Vec3(0,0,0)
         self._isAirborne = False
@@ -150,6 +152,10 @@ class playerEnt(npEnt):
         self.timeOffRide = 0
         self.isRiding = False
         self.touchingRide = False
+        
+        #Ladders
+        self.onLadder = False
+        self.ladder = None
         
         ##bBox
         self._inCrouch = False#Are we doing the crouching animation?
@@ -171,6 +177,7 @@ class playerEnt(npEnt):
         if not base.isHost:
             self.accept("addRide{" + self.name, self.add_ride_network)
             self.accept("removeRide{" + self.name, self.remove_ride)
+            self.accept("playerWpn access change{" + self.name, self.change_wpn_access)
         
     ##########
     #Spawning#
@@ -187,6 +194,7 @@ class playerEnt(npEnt):
     def de_spawn(self):
         self.remove_ride()
         self.np.detach_node()#carefull not to lose the class refrence during this time!
+        self._collidingNps = []
         self._isSpawned = False
         
     ##################
@@ -198,7 +206,8 @@ class playerEnt(npEnt):
     def update(self, task = None):
         ##########Part 1: calculate the half-frame change in velocity
         deltaTime = globalClock.get_dt()
-        if not self._isSwim: self.velocity_half_update(deltaTime) 
+        if not (self._isSwim or self.onLadder): self.velocity_half_update(deltaTime)
+        elif self.onLadder: self.ladder_half_update(deltaTime)
         else: self.swim_half_update(deltaTime)
         ##########Part 2: Perform Movement calculations
         #Riding
@@ -215,6 +224,7 @@ class playerEnt(npEnt):
         
         ##Calculate rotation
         self.np.set_h(self.np, self._hRot)#TODO:: This is insecure against aimhacking.
+        #print(self.np.get_h())
         #Rotate velocity
         turn = Quat()
         turn.set_from_axis_angle(self._hRot, self.upVec)
@@ -241,7 +251,8 @@ class playerEnt(npEnt):
         
         ##########Part 3: calculate the second-half-frame velocity change
         avgRate = globalClock.get_average_frame_rate()#this is a prediction for how long the next frame will be
-        if not self._isSwim: self.velocity_half_update(1/avgRate)#divide 1 by avgRate to get estimated next frame time
+        if not (self._isSwim or self.onLadder): self.velocity_half_update(1/avgRate)#divide 1 by avgRate to get estimated next frame time
+        elif self.onLadder: self.ladder_half_update(1/avgRate)
         else: self.swim_half_update(1/avgRate)
         #Easy as that, right?
         if task:
@@ -371,6 +382,80 @@ class playerEnt(npEnt):
         elif not self._xMove and self.velocity.get_x() != 0:
             self.velocity.set_x(0)
             
+    
+
+    def ladder_half_update(self, scalar):
+        npH = self.np.get_h(self.ladder)
+        
+        amntNotFacing = 180 - abs(npH)#The number of degrees by which the nodepath is not facing the ladder
+        
+        if abs(npH) < 45:#ladder in front
+            climbMove = self._yMove
+            slideMove= -self._xMove
+        elif 45 < npH <= 135:#Ladder to left
+            climbMove = -self._xMove
+            slideMove = self._yMove
+        elif -45 > npH >= -135:#Ladder to right
+            climbMove = self._xMove
+            slideMove = -self._yMove
+        else:#ladder behind or error
+            climbMove = -self._yMove
+            slideMove= self._xMove
+            
+        ladderAccel = 1
+        ladderMax = 1.5
+        
+        axisCalc = Quat()
+        axisCalc.set_from_axis_angle(npH, self.upVec)
+        axisCalc.normalize()
+        slideAxis = axisCalc.get_right()
+        
+        if climbMove:
+            if abs(self.velocity.get_z()) > ladderMax:
+                self.velocity.set_z(copysign(ladderMax, self.velocity.get_z()))
+            else:
+                self.velocity.add_z(climbMove * ladderAccel * scalar / 2)
+        else:
+            if abs(self.velocity.get_z()) < 0.05:
+                self.velocity.set_z(0)
+            else:
+                self.velocity.add_z(-copysign(scalar*ladderAccel/2, self.velocity.get_z()))
+                if abs(self.velocity.get_z()) < 0.05: self.velocity.set_z(0)
+        
+
+        if slideMove:
+            if abs(self.velocity.get_xy().length()) < ladderMax:
+                slideVelocity = slideAxis * slideMove * ladderAccel * scalar / 2
+                self.velocity.add_x(slideVelocity.get_x())
+                self.velocity.add_y(slideVelocity.get_y())
+            else:
+                self.velocity.set_y((self.velocity.get_xy().normalized() * ladderMax).get_y())
+                self.velocity.set_x((self.velocity.get_xy().normalized() * ladderMax).get_x())
+        else:
+            if abs(self.velocity.get_x()) < 0.05:
+                self.velocity.set_x(0)
+            else:
+                self.velocity.add_x(-copysign(scalar*ladderAccel/2, self.velocity.get_x()))
+                if abs(self.velocity.get_x()) < 0.05:
+                    self.velocity.set_x(0)
+                    
+            if abs(self.velocity.get_y()) < 0.05:
+                self.velocity.set_y(0)
+            else:
+                self.velocity.add_y(-copysign(scalar*ladderAccel/2, self.velocity.get_y()))
+                if abs(self.velocity.get_y()) < 0.05:
+                    self.velocity.set_y(0)
+            
+
+        if self._wantJump:
+            if amntNotFacing > 90:
+                self.velocity.add_y(0.5)#Forgot that velocity is player relative
+                self.velocity.add_z(2)
+            else:#Jump in direction we're looking
+                self.velocity.add_y(-0.5)
+                self.velocity.add_z(2)
+            self.onLadder = False
+        
            
 
     def add_ride(self, ride):
@@ -422,13 +507,13 @@ class playerEnt(npEnt):
             self.uncrouch()
             self._inCrouch = False
             return Task.done
-        self._rig.set_z(-0.1 + (1.5- (time/0.3)))
+        self._rig.set_z(0.6 + (0.95- (time/0.3)))
         return Task.cont
         
     
     def crouch(self):
         self.bBox.node().set_solid(0,self.bBSolids[1])
-        self._rig.set_z(-0.1)
+        self._rig.set_z(0.6)
         if self._isAirborne:
             self.np.set_z(self.np, 1)
         self._isCrouched = True
@@ -446,8 +531,12 @@ class playerEnt(npEnt):
             
     def tangible_collide_into_event(self, entry):
         vector = entry.get_surface_normal(entry.get_from_node_path())#WARNING!! Unapplied rotation transforms like to fuck with this!#TODO:: Figure out what I meant from this.
+        point = entry.get_surface_point(entry.get_from_node_path())
         if vector.get_z() > 0.6:#(Above comment is copied from code from other project.)
             self._isAirborne = False
+            self._collidingNps.append(entry.get_from_node_path())
+        elif (not vector.get_z() < 0) and point.z + 1 <= 0.03 and point.z > 0:
+            self.np.set_z(self.np, point.z+1)
         self.bend_velocity(vector)
         
     def tangible_collide_again_event(self, entry):
@@ -471,7 +560,9 @@ class playerEnt(npEnt):
             self.velocity -= mod
     
     def tangible_collide_out_event(self, entry):
-        self._isAirborne = True
+        np = entry.get_from_node_path()
+        if np in self._collidingNps: self._collidingNps.remove(np)
+        if len(self._collidingNps) == 0: self._isAirborne = True
         
 
     def water_collide_into_event(self, entry):
@@ -503,7 +594,8 @@ class playerEnt(npEnt):
         if base.isHost:
             if self.health <= 0:#Host tells us when to die, we don't decide that for ourselves.
                 self.die(damage.source)
-            self.health_changed =True
+            #self.health_changed =True
+            base.server.add_message("playerHealthChange{" + self.name, (self.health,))
     
     def die(self, cause):#TODO:: add code for "dropping weapons"
         self.de_spawn()
@@ -511,6 +603,10 @@ class playerEnt(npEnt):
         
     def add_weapon(self, wpnType, **kwargs):#See clientPlayer for why we might want to override this
         self.wpnMgr.add_weapon(wpnType(**kwargs))
+        
+    def change_wpn_access(self, accessVal):
+        if accessVal: self.wpnMgr.enable_weapons()
+        else: self.wpnMgr.disable_weapons()
         
     ####################
     #Management Methods#
@@ -535,10 +631,11 @@ class playerEnt(npEnt):
         elif self._wpnFire:#Simplify datagram
             server.add_message("fire{" + self.name, (self._wpnFire,))
             self._wpnFire = 0#This is a double redundancy for clientPlayer, but we need this here for hostNetPlayer, or else it won't get serialized to clients
-            
+        '''
         if self.health_changed:
             server.add_message("playerHealthChange{" + self.name, (self.health,))
             self.health_changed = False
+            '''
     
 
     def destroy(self):

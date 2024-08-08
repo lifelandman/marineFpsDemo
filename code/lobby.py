@@ -206,7 +206,7 @@ class lobby_ui(DirectObject):
         self.action_label.setText("map: " + name)
         self.oList = [DirectButton(text = "play", text_scale = 0.09, pos = (-0.826, 0, -0.35), frameSize = (-0.465, 0.465, -0.05, 0.05), text_pos = (0,-0.03), command = self.play_map, extraArgs = [name])
             ]
-        if name[:3] == "wf_":
+        if name.split("_")[0] == "wf":
             self.tracker.sort_teams_rb()
             self.make_player_list()
         else:
