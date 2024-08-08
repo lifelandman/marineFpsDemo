@@ -18,6 +18,12 @@ class entBase(DirectObject):
         
         if len(kwargs) > 0:
             print("warning! kwargs len recieved by entBase is ==", str(len(kwargs)))
+            
+        self.acceptOnce("gameStart", self.start_interactivity)#Wait until the game starts so all players can have better synchronization
+        
+
+    def start_interactivity(self):
+        name = self.name
         #add tasks
         for taskGroup in self.tasks:
             tskName = taskGroup[0].format(name = name)

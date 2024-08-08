@@ -159,6 +159,7 @@ class funcRotateAroundTarget(funcRideable):
         #self.update()
         self.pseudoVelocity = Vec3(0, self._speed, 0)
         
+        
     def update(self, taskObj=None):
         #Client-only skip
         if self.got_match:
@@ -170,7 +171,6 @@ class funcRotateAroundTarget(funcRideable):
         frameDistance = self._speed * dt
         self._distanceDegrees += frameDistance * self._unitDegreeConversion
         if self._distanceDegrees > 360: self._distanceDegrees -= 360
-        elif self._distanceDegrees < 0: self._distanceDegrees += 360
         distanceRad = radians(self._distanceDegrees)
 
         distancesFromTarget = Vec2(cos(distanceRad), sin(distanceRad))

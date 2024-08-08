@@ -166,6 +166,7 @@ class playerEnt(npEnt):
         #Health
         self.health = self.maxHealth
         self.health_changed = False
+        
     
     def add_colliders(self, trav, handler):
         trav.add_collider(self.bBox, handler)

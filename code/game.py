@@ -104,6 +104,7 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
     def game_start(self):
         if self.lobby.isHost:
             self.lobby.server.add_message('gameStart')
+            messenger.send("gameStart")
         else:
             self.ignore('gameStart')
         self.playerMgr.round_start()

@@ -13,7 +13,7 @@ from panda3d.core import Shader
 from panda3d.core import TexGenAttrib, TextureStage
 
 def loadWorld(game, worldFile):
-    game.world = base.loader.load_model(worldFile)
+    game.world = base.loader.load_model(worldFile, noCache = True)
     game.world.reparent_to(base.render)
         
 

@@ -37,7 +37,7 @@ class playerManager(DirectObject):
                 self.add_player(playername, team = team)
             
     def add_player(self, name, team):
-        if name == self.gameObj.lobby.tracker.pid_2_name(self.gameObj.lobby.memVal):#We're the local player. ALSO:: Another thing that needs to change with a rework of netTracker
+        if name == base.game_instance.lobby.tracker.pid_2_name(self.gameObj.lobby.memVal):#We're the local player. ALSO:: Another thing that needs to change with a rework of netTracker
             newP = clientPlayer(name = name, camera = base.camera, team = team, isHost = (base.game_instance.lobby.tracker.get_id(name) == "host"))
             newP.add_colliders(base.cTrav, self.gameObj.handler)
             self.clientEnt = newP
