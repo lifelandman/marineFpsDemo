@@ -156,6 +156,7 @@ class playerEnt(npEnt):
         #Ladders
         self.onLadder = False
         self.ladder = None
+        self.ladderH = 0
         
         ##bBox
         self._inCrouch = False#Are we doing the crouching animation?
@@ -384,30 +385,31 @@ class playerEnt(npEnt):
             self.velocity.set_x(0)
             
     
-
     def ladder_half_update(self, scalar):
-        npH = self.np.get_h(self.ladder)
+        npH = self.np.get_h(self.ladder)#Need to correct this for sides
         
-        amntNotFacing = 180 - abs(npH)#The number of degrees by which the nodepath is not facing the ladder
+        ladderSide = self.ladder.get_x(self.np) > 0#True if to the right of our nodepath
+        amntNotFacing = abs(self.ladderH) - abs(npH)#The number of degrees by which the nodepath is not facing the ladder
         
-        if abs(npH) < 45:#ladder in front
-            climbMove = self._yMove
-            slideMove= -self._xMove
-        elif 45 < npH <= 135:#Ladder to left
-            climbMove = -self._xMove
-            slideMove = self._yMove
-        elif -45 > npH >= -135:#Ladder to right
+        if amntNotFacing < 45:#ladder in front
+            if self._rig.get_p() >= 0:
+                climbMove = self._yMove
+                slideMove = self._xMove
+            else:#ladder behind
+                climbMove = -self._yMove
+                slideMove = -self._xMove
+        elif ladderSide:#Ladder to right
             climbMove = self._xMove
             slideMove = -self._yMove
-        else:#ladder behind or error
-            climbMove = -self._yMove
-            slideMove= self._xMove
+        else:#Ladder to left or error
+            climbMove = -self._xMove
+            slideMove = self._yMove
             
         ladderAccel = 1
         ladderMax = 1.5
         
         axisCalc = Quat()
-        axisCalc.set_from_axis_angle(npH, self.upVec)
+        axisCalc.set_from_axis_angle(self.ladderH, self.upVec)
         axisCalc.normalize()
         slideAxis = axisCalc.get_right()
         
@@ -417,7 +419,7 @@ class playerEnt(npEnt):
             else:
                 self.velocity.add_z(climbMove * ladderAccel * scalar / 2)
         else:
-            if abs(self.velocity.get_z()) < 0.05:
+            if abs(self.velocity.get_z()) < 1:
                 self.velocity.set_z(0)
             else:
                 self.velocity.add_z(-copysign(scalar*ladderAccel/2, self.velocity.get_z()))

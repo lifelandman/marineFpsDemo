@@ -25,6 +25,7 @@ class funcSpin(npEnt):
     
 
 from math import atan2
+from panda3d.core import headsUp, Quat
 class funcLadder(npEnt):
     acceptCollisions = True
     
@@ -37,10 +38,14 @@ class funcLadder(npEnt):
     events = (("player-in-{name}", "in_player"), ("player-out-{name}", "out_player"))
     
     def in_player(self, entry):
+        #print("in ladder")
         #Calc angle
         player = entry.get_from_node_path().get_net_python_tag("entOwner")
         player.onLadder = True
         player.ladder = self.np
+        quat = Quat()
+        headsUp(quat, entry.get_surface_normal(self.np))
+        player.ladderH = quat.get_hpr().get_x()#assuming x = h here
         
     def out_player(self, entry):
         #print("out ladder")
