@@ -221,7 +221,7 @@ class playerEnt(npEnt):
             else: self.timeOffRide += deltaTime
             
 
-        self.np.set_pos(self.np, self.velocity)
+        if self.velocity.length(): self.np.set_pos(self.np, self.velocity)
         
         
         ##Calculate rotation
@@ -386,25 +386,30 @@ class playerEnt(npEnt):
             
     
     def ladder_half_update(self, scalar):
-        npH = self.np.get_h(self.ladder)#Need to correct this for sides
+        npH = self.np.get_h(base.game_instance.world)#Need to correct this for sides
         
         ladderSide = self.ladder.get_x(self.np) > 0#True if to the right of our nodepath
-        amntNotFacing = abs(self.ladderH) - abs(npH)#The number of degrees by which the nodepath is not facing the ladder
+        amntNotFacing = abs(180 - abs(self.ladderH - npH))#The number of degrees by which the nodepath is not facing the ladder
+        #print(amntNotFacing)
         
-        if amntNotFacing < 45:#ladder in front
+        if amntNotFacing < 45 or amntNotFacing > 135:#ladder in front/behind
             if self._rig.get_p() >= 0:
                 climbMove = self._yMove
                 slideMove = self._xMove
-            else:#ladder behind
+            elif amntNotFacing > 135:#Ladder Behind and looking down
                 climbMove = -self._yMove
-                slideMove = -self._xMove
+                slideMove = - -self._xMove
+            else:#looking front down
+                climbMove = -self._yMove
+                slideMove = self._xMove
         elif ladderSide:#Ladder to right
             climbMove = self._xMove
             slideMove = -self._yMove
         else:#Ladder to left or error
             climbMove = -self._xMove
             slideMove = self._yMove
-            
+        
+
         ladderAccel = 1
         ladderMax = 1.5
         
@@ -412,6 +417,7 @@ class playerEnt(npEnt):
         axisCalc.set_from_axis_angle(self.ladderH, self.upVec)
         axisCalc.normalize()
         slideAxis = axisCalc.get_right()
+        slideAxis.normalize()
         
         if climbMove:
             if abs(self.velocity.get_z()) > ladderMax:
@@ -452,11 +458,11 @@ class playerEnt(npEnt):
 
         if self._wantJump:
             if amntNotFacing > 90:
-                self.velocity.add_y(0.5)#Forgot that velocity is player relative
-                self.velocity.add_z(2)
+                self.velocity.add_y(0.5/2)#Forgot that velocity is player relative
+                self.velocity.add_z(2/2)
             else:#Jump in direction we're looking
-                self.velocity.add_y(-0.5)
-                self.velocity.add_z(2)
+                self.velocity.add_y(-0.5/2)
+                self.velocity.add_z(2/2)
             self.onLadder = False
         
            
@@ -576,6 +582,10 @@ class playerEnt(npEnt):
         
     def water_collide_out_event(self, entry):
         self._isSwim = False
+        if (self._wantJump and self._yMove > 0) and self._rig.get_p() > 30:
+            self.velocity.add_z(0.1)
+        elif self._wantJump and self.velocity.get_z() > 0.1:
+            self.velocity.add_z(-0.05)#Slow down velocity so we can try and 'float'
         
 
     def fire(self, fireVal):

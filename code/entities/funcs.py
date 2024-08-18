@@ -8,7 +8,7 @@ directory:
 from .npEnt import *
 from direct.task import Task
 
-from math import degrees
+from math import copysign, degrees
 ######################MOVEMENT FUNCS#######################
 
 class funcSpin(npEnt):
@@ -43,12 +43,31 @@ class funcLadder(npEnt):
         player = entry.get_from_node_path().get_net_python_tag("entOwner")
         player.onLadder = True
         player.ladder = self.np
+        
+        #calc ladderH
+        norm = entry.get_surface_normal(self.np)
+        if norm.get_y() > norm.get_x():
+            if norm.get_y() > 0:
+                offset = 0
+            else:
+                offset = 180
+        else:
+            if norm.get_x() > 0:
+                offset = 90
+            else:
+                offset = -90
+        ladderH = offset + self.np.get_h(base.game_instance.world)
+        if abs(ladderH) > 180: ladderH = -copysign(180 - abs(ladderH - copysign(180, ladderH)), ladderH)
+        #print(ladderH)
+        player.ladderH = ladderH
+        '''
         quat = Quat()
         headsUp(quat, entry.get_surface_normal(self.np))
         player.ladderH = quat.get_hpr().get_x()#assuming x = h here
+        '''
         
     def out_player(self, entry):
-        #print("out ladder")
+        print("out ladder")
         player = entry.get_from_node_path().get_net_python_tag("entOwner")
         if player.onLadder and player.ladder == self.np:
             player.ladder = None

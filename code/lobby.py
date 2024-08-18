@@ -219,7 +219,7 @@ class lobby_ui(DirectObject):
         for file in self.mapDirList:
             if count >4:
                 break
-            self.mapList.append(DirectButton(text = file, parent = self.map_frame, pos = (0.975, 0, 0.7 - (0.45*count)), text_scale = 0.09, text_pos = (0,-0.03), frameSize = (-0.29, 0.29, -0.2, 0.2),
+            self.mapList.append(DirectButton(text = file.replace(".egg", ""), parent = self.map_frame, pos = (0.975, 0, 0.7 - (0.45*count)), text_scale = 0.09, text_pos = (0,-0.03), frameSize = (-0.29, 0.29, -0.2, 0.2),
                                              borderWidth = (0.05,0.05), command = self.set_options_map, extraArgs = [file]))
             count +=1
                 

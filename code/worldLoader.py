@@ -15,6 +15,11 @@ from panda3d.core import TexGenAttrib, TextureStage
 def loadWorld(game, worldFile):
     game.world = base.loader.load_model(worldFile, noCache = True)
     game.world.reparent_to(base.render)
+    
+    if "_debug" in worldFile:
+        for np in game.world.find_all_matches("**/+GeomNode"):
+            addWorldUvsGeomNode(np)
+        game.world.set_texture(loader.load_texture("images/dev_blue.png"))
         
 
     collisionNodes = game.world.find_all_matches('**/+CollisionNode')
@@ -81,3 +86,42 @@ def loadWorld(game, worldFile):
     game.amLNp = base.render.attach_new_node(sun)
     base.render.set_light(game.amLNp)
     del sun
+    
+
+from panda3d.core import GeomVertexFormat, GeomVertexWriter, GeomVertexReader
+def addWorldUvsGeomNode(np):
+    geomNode = np.node()
+    for i in range(geomNode.get_num_geoms()):
+        geom = geomNode.modify_geom(i)
+        vData = geom.modify_vertex_data()
+        vFormat = vData.get_format()
+        
+        for col in vFormat.get_columns():
+            if col.get_name() == "texcoord": break
+        else:#No texcoord, must create
+            vFormat = GeomVertexFormat.get_v3n3t2()
+            vData.set_format(vFormat)
+        
+        uvs = GeomVertexWriter(vData, "texcoord")
+        normals = GeomVertexReader(vData, "normal")
+        pos = GeomVertexReader(vData, "vertex")
+        while not uvs.is_at_end():
+            n = normals.get_data3()
+            p = pos.get_data3()
+            
+            x = p[0] * np.get_sx() + np.get_x()
+            y = p[1] * np.get_sy() + np.get_y()
+            z = p[2] * np.get_sz() + np.get_z()
+            
+            u = (x * (1- abs(n[0]))) + (y * abs(n[0]))
+            v = (y * abs(n[2])) + (z * (1- abs(n[2])))
+            '''
+            if abs(n[0]) > abs(n[1]) and abs(n[0]) > abs(n[2]):#normal x component greater than y and z
+                u,v = y, z#u,v = y,z
+            elif abs(n[1]) > abs(n[2]):#y > z
+                u,v = x, z
+            else:
+                u,v = x, y
+            '''
+            
+            uvs.set_data2(u, v)
