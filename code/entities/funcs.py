@@ -6,6 +6,7 @@ directory:
 '''
 
 from .npEnt import *
+
 from direct.task import Task
 
 from math import copysign, degrees
@@ -24,6 +25,7 @@ class funcSpin(npEnt):
     turn = 100#how many units to turn per second on average
     
 
+
 from math import atan2
 from panda3d.core import headsUp, Quat
 class funcLadder(npEnt):
@@ -31,47 +33,85 @@ class funcLadder(npEnt):
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        npH = self.np.get_h()
-        if npH < 0: npH = 360 + npH
+        
+        if self.np.node().is_collision_node():
+            cbox = self.np.node().get_solid(0)
+        else: cbox = self.np.find('**/+CollisionNode').node().get_solid(0)
+        
+        dimensions = cbox.get_dimensions()
+        self._zDist = dimensions.get_z()/2#z distance from center
+        self._xSideDist = dimensions.get_x()/2
+        self._ySideDist = dimensions.get_y()/2
+        
+        self._climbingPlayers = []
         #print(self.name)
         
-    events = (("player-in-{name}", "in_player"), ("player-out-{name}", "out_player"))
+    events = (("player-in-{name}", "in_player"),)
+    tasks = (("{name}-check_players", "check_players"),)
     
     def in_player(self, entry):
         #print("in ladder")
         #Calc angle
         player = entry.get_from_node_path().get_net_python_tag("entOwner")
+        if player.onLadder: return#Skip everything, player's already on a ladder
+        
         player.onLadder = True
         player.ladder = self.np
         
         #calc ladderH
         norm = entry.get_surface_normal(self.np)
-        if norm.get_y() > norm.get_x():
-            if norm.get_y() > 0:
+        if abs(norm.get_y()) > abs(norm.get_x()):
+            if norm.get_y() < 0:
                 offset = 0
             else:
                 offset = 180
+            xSide = False
+            player.ladderXAxis = True
         else:
             if norm.get_x() > 0:
                 offset = 90
             else:
                 offset = -90
+            xSide = True
+            player.ladderXAxis = False
         ladderH = offset + self.np.get_h(base.game_instance.world)
         if abs(ladderH) > 180: ladderH = -copysign(180 - abs(ladderH - copysign(180, ladderH)), ladderH)
         #print(ladderH)
         player.ladderH = ladderH
+        
+        #Do stuff that this entity needs
+        self.acceptOnce(player.name +"-into-ground", self.player_ground)
+        self._climbingPlayers.append([player, xSide])
         '''
         quat = Quat()
         headsUp(quat, entry.get_surface_normal(self.np))
         player.ladderH = quat.get_hpr().get_x()#assuming x = h here
         '''
         
-    def out_player(self, entry):
-        print("out ladder")
+
+    def check_players(self, taskobj):
+        for playerGroup in self._climbingPlayers:
+            player = playerGroup[0]
+            if abs(player.np.get_z(self.np) - 1) > self._zDist:
+                player.exit_ladder()
+            else:
+                if playerGroup[1]:
+                    if abs(player.np.get_y(self.np)) > self._ySideDist: player.exit_ladder()
+                elif abs(player.np.get_x(self.np)) > self._xSideDist: player.exit_ladder()
+                
+
+    def remove_player(self, player):
+        for pGroup in self._climbingPlayers:
+            if pGroup[0] is player: self._climbingPlayers.remove(pGroup)
+            
+
+    def player_ground(self, entry):
         player = entry.get_from_node_path().get_net_python_tag("entOwner")
-        if player.onLadder and player.ladder == self.np:
-            player.ladder = None
-            player.onLadder = False
+        vector = entry.get_surface_normal(entry.get_from_node_path())
+        if vector.get_z() > 0.6 and player.onLadder and player.ladder == self.np:
+            player.exit_ladder()
+        else:
+            self.acceptOnce(player.name +"-into-ground", self.player_ground)
 
 
 from ..weapons.damageTypes import healingDamageType

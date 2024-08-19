@@ -157,6 +157,7 @@ class playerEnt(npEnt):
         self.onLadder = False
         self.ladder = None
         self.ladderH = 0
+        self.ladderXAxis = False
         
         ##bBox
         self._inCrouch = False#Are we doing the crouching animation?
@@ -198,6 +199,7 @@ class playerEnt(npEnt):
         self.np.detach_node()#carefull not to lose the class refrence during this time!
         self._collidingNps = []
         self._isSpawned = False
+        self.exit_ladder()
         
     ##################
     #Movement Methods#
@@ -386,6 +388,20 @@ class playerEnt(npEnt):
             
     
     def ladder_half_update(self, scalar):
+        
+        #While player is on ladder we need to quickly slow velocity, so this is first
+        ladderAccel = 1
+        ladderMax = 7
+        
+        if self.velocity.length():
+            if abs(self.velocity.length()) < 1:
+                    self.velocity.set(0,0,0)
+            else:
+                self.velocity.add_x(-copysign(scalar*ladderAccel/2, self.velocity.get_x()))
+                self.velocity.add_y(-copysign(scalar*ladderAccel/2, self.velocity.get_y()))
+                self.velocity.add_z(-copysign(scalar*ladderAccel/2, self.velocity.get_z()))
+                if abs(self.velocity.length()) < 0.05: self.velocity.set(0, 0, 0)
+
         npH = self.np.get_h(base.game_instance.world)#Need to correct this for sides
         
         ladderSide = self.ladder.get_x(self.np) > 0#True if to the right of our nodepath
@@ -408,52 +424,26 @@ class playerEnt(npEnt):
         else:#Ladder to left or error
             climbMove = -self._xMove
             slideMove = self._yMove
+        slideMove *= copysign(1, self.ladderH)
         
-
-        ladderAccel = 1
-        ladderMax = 1.5
-        
+        '''
         axisCalc = Quat()
         axisCalc.set_from_axis_angle(self.ladderH, self.upVec)
         axisCalc.normalize()
         slideAxis = axisCalc.get_right()
         slideAxis.normalize()
+        '''
         
         if climbMove:
-            if abs(self.velocity.get_z()) > ladderMax:
-                self.velocity.set_z(copysign(ladderMax, self.velocity.get_z()))
-            else:
-                self.velocity.add_z(climbMove * ladderAccel * scalar / 2)
-        else:
-            if abs(self.velocity.get_z()) < 1:
-                self.velocity.set_z(0)
-            else:
-                self.velocity.add_z(-copysign(scalar*ladderAccel/2, self.velocity.get_z()))
-                if abs(self.velocity.get_z()) < 0.05: self.velocity.set_z(0)
+            self.np.set_z(self.np, climbMove * ladderMax * scalar / 2)
         
 
         if slideMove:
-            if abs(self.velocity.get_xy().length()) < ladderMax:
-                slideVelocity = slideAxis * slideMove * ladderAccel * scalar / 2
-                self.velocity.add_x(slideVelocity.get_x())
-                self.velocity.add_y(slideVelocity.get_y())
+            #slideVelocity = slideAxis * slideMove * ladderMax * scalar / 2
+            if self.ladderXAxis:#TODO:: This doesn't account for what side of the ladder we're on
+                self.np.set_x(self.ladder, self.np.get_x(self.ladder) + (slideMove * ladderMax * scalar/2))
             else:
-                self.velocity.set_y((self.velocity.get_xy().normalized() * ladderMax).get_y())
-                self.velocity.set_x((self.velocity.get_xy().normalized() * ladderMax).get_x())
-        else:
-            if abs(self.velocity.get_x()) < 0.05:
-                self.velocity.set_x(0)
-            else:
-                self.velocity.add_x(-copysign(scalar*ladderAccel/2, self.velocity.get_x()))
-                if abs(self.velocity.get_x()) < 0.05:
-                    self.velocity.set_x(0)
-                    
-            if abs(self.velocity.get_y()) < 0.05:
-                self.velocity.set_y(0)
-            else:
-                self.velocity.add_y(-copysign(scalar*ladderAccel/2, self.velocity.get_y()))
-                if abs(self.velocity.get_y()) < 0.05:
-                    self.velocity.set_y(0)
+                self.np.set_y(self.ladder, self.np.get_y(self.ladder) + (slideMove * ladderMax * scalar/2))
             
 
         if self._wantJump:
@@ -464,9 +454,18 @@ class playerEnt(npEnt):
                 self.velocity.add_y(-0.5/2)
                 self.velocity.add_z(2/2)
             self.onLadder = False
+            
+    def exit_ladder(self):#Defined here so we can access it ourselves if need be
+        self.ladder.get_net_python_tag("entOwner").remove_player(self)
+        self.ladder = None
+        self.onLadder = False
+        self.ladderH = False#Technically a number if we need it, but saves memory by not creating a new number
         
-           
 
+    ########
+    #Riding#
+    ########
+    
     def add_ride(self, ride):
         if ride != self.riding: self.np.wrt_reparent_to(ride.np)
         #self.np.set_pos(self.np.get_pos(ride.np))
@@ -661,6 +660,11 @@ class playerEnt(npEnt):
         
         del self.velocity
         super().destroy()
+        
+
+######################\
+#####client player#####
+######################/      
 
 
 from panda3d.core import ConfigVariableString
@@ -849,7 +853,12 @@ class clientPlayer(playerEnt):
             self.toggle_inputs()
         #self.ignoreAll()
         super().destroy()
-    
+        
+
+########################\
+#####host net player#####
+########################/
+
 
 class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, _hRot, _pRot, vX,vY,vZ,h,p,x,y,z,is_airborne)
     def __init__(self, **kwargs):
@@ -930,6 +939,12 @@ class hostNetPlayer(playerEnt):#(player._yMove, _xMove, _wantJump, _wantCrouch, 
         
     def set_weapon(self, slot, priority):
         self.wpnMgr.goto_subSlot(slot, priority)
+        
+
+##########################\
+#####client net player#####
+##########################/
+
     
 class clientNetPlayer(playerEnt):#This one doesn't check to see if movement seems legit nor sends out instructions.
     over = False#This might not be nessisary???

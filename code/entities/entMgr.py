@@ -1,5 +1,6 @@
 from .funcs import *
 
+from direct.directnotify.DirectNotify import DirectNotify
 
 class entityManager():
     
@@ -15,6 +16,8 @@ class entityManager():
     def __init__(self):
         world = base.game_instance.world
         self.entities = []
+        
+        notify = DirectNotify().newCategory("Entity initialization")
 
         if not base.isHost:
             checks = entityManager.entChecks
@@ -42,7 +45,8 @@ class entityManager():
                     #print(np.get_name())
                     entity = entCheck[1](name = np.get_name() + "_" +entCheck[0], np = np, **params)
                     self.entities.append(entity)
-                except: print("failed entity initialization")
+                except Exception as error:
+                    notify.warning("failed entity initialization:", error)
         #render.ls()
                 
     def get_entity(self, entName):
