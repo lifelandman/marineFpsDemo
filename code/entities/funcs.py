@@ -40,8 +40,8 @@ class funcLadder(npEnt):
         
         dimensions = cbox.get_dimensions()
         self._zDist = dimensions.get_z()/2#z distance from center
-        self._xSideDist = dimensions.get_x()/2
-        self._ySideDist = dimensions.get_y()/2
+        self._xSideDist = dimensions.get_x()/2 + 0.6#add zero point 6 to represent player hanging on with left/right side
+        self._ySideDist = dimensions.get_y()/2 + 0.6
         
         self._climbingPlayers = []
         #print(self.name)
@@ -92,12 +92,13 @@ class funcLadder(npEnt):
     def check_players(self, taskobj):
         for playerGroup in self._climbingPlayers:
             player = playerGroup[0]
-            if abs(player.np.get_z(self.np) - 1) > self._zDist:
+            if player.np.get_z(self.np) - 1 > self._zDist:#not abs because player_ground takes care of getting off at bottom and was preventing getting on by walking
                 player.exit_ladder()
             else:
                 if playerGroup[1]:
                     if abs(player.np.get_y(self.np)) > self._ySideDist: player.exit_ladder()
                 elif abs(player.np.get_x(self.np)) > self._xSideDist: player.exit_ladder()
+        return Task.cont
                 
 
     def remove_player(self, player):

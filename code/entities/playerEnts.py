@@ -453,9 +453,11 @@ class playerEnt(npEnt):
             else:#Jump in direction we're looking
                 self.velocity.add_y(-0.5/2)
                 self.velocity.add_z(2/2)
-            self.onLadder = False
+            self.exit_ladder()
             
     def exit_ladder(self):#Defined here so we can access it ourselves if need be
+        #print('exiting ladder')
+        if not self.onLadder: return
         self.ladder.get_net_python_tag("entOwner").remove_player(self)
         self.ladder = None
         self.onLadder = False

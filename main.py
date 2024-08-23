@@ -26,7 +26,6 @@ class game(ShowBase):
         self.menu = menu_ui(indirectStart)
 
 
-
 if __name__ == "__main__":
     myGame = game()
     myGame.run()
