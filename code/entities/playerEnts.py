@@ -9,7 +9,7 @@ from os import name
 from panda3d.core import NodePath
 #collision:
 from panda3d.core import CollisionNode, CollisionBox, CollisionSphere, CollisionCapsule
-from panda3d.core import Point3, Vec3, Vec2
+from panda3d.core import Point3, Vec3, Vec2, Mat4
 from panda3d.core import BitMask32
 #Bullet raytracing:
 #from panda3d.core import LensNode, PerspectiveLens
@@ -19,7 +19,7 @@ from panda3d.core import Quat
 #Tasks:
 from direct.task import Task
 ###Math:
-from math import copysign, sqrt, isclose
+from math import copysign, isclose
 ###ours:
 from .npEnt import npEnt
 from .playerModel import playerMdl
@@ -223,16 +223,14 @@ class playerEnt(npEnt):
             else: self.timeOffRide += deltaTime
             
 
-        if self.velocity.length(): self.np.set_pos(self.np, self.velocity)
-        
+        if self.velocity.length(): self.np.set_fluid_pos(self.np.get_pos() + self.velocity * deltaTime)
+        #print(self.velocity)
         
         ##Calculate rotation
         self.np.set_h(self.np, self._hRot)#TODO:: This is insecure against aimhacking.
         #print(self.np.get_h())
         #Rotate velocity
-        turn = Quat()
-        turn.set_from_axis_angle(self._hRot, self.upVec)
-        turn.xform(self.velocity)
+            
         #Calculate pitch
         if self._pRot != 0 and (abs(self._rig.get_p() + self._pRot) <= 85):
             self._rig.set_p(self._rig, self._pRot)
@@ -268,120 +266,131 @@ class playerEnt(npEnt):
         scalar should be deltatime for first half, average frame rate for second
         '''
         if self._isAirborne:#changing z velocity is a bad idea if we're touching the ground.
-            self.velocity.add_z(-((4*scalar)/2))#Subtract vertical velocity for half a frame. #TODO:: if you want weight modifiers, add them here.#4 is gravity
+            self.velocity.add_z(-((97.3*scalar)/2))#Subtract vertical velocity for half a frame. #TODO:: if you want weight modifiers, add them here.#4 is gravity
         elif self._wantJump:
-            self.velocity.add_z(sqrt(1.1)/2)
+            zOffset = self.velocity.get_z() if self.velocity.get_z() > 0 else 0
+            self.velocity.add_z(21.920 - zOffset/2)
             
         ##Begin xy velocity
         velo2d = abs(self.velocity.get_xy().length())
             
-        speedLimit = 1.5#maximum horizontal speed
+        speedLimit = 55.5#maximum horizontal speed
         speedToLimit = speedLimit - velo2d
-        absoluteLimit = 3
+        absoluteLimit = 100
         walkAccel = speedLimit if speedToLimit/speedLimit >= 0.98 else speedToLimit * 4
-        airAccel = 0.5#acceleration while in air per second
-        friction = 1.05#deceleration/acceleration resistance per second. If velocity in a direction is less than this, velocity is stopped in a short period of time
+        airAccel = 10#acceleration while in air per second
+        friction = 48.18#deceleration/acceleration resistance per second. If velocity in a direction is less than this, velocity is stopped in a short period of time
         
         ##Adjust values
         if (not (self._yMove or self._xMove)): friction *= 2
         elif self.velocity.length() > speedLimit: friction *= 4
         notExceedSpeedLimit = velo2d < speedLimit
         
-            
+
         ##Velocity Calculations
         #Y velosity calculations
+        normVector = self.velocity.get_xy().normalized()
+        newVelocity = Vec3(0,0,0)
+
         if self._yMove:
             if not self._isAirborne and notExceedSpeedLimit:
-                if abs(self.velocity.get_y() + self._yMove) < abs(self.velocity.get_y()):
-                    self.velocity.add_y(copysign(min(abs(self.velocity.get_y()), speedLimit), self._yMove)/2)#instantly reverse momentum
-                else:
+                dVector = self.np.get_parent().get_relative_vector(self.np, Vec3(0,1,0))#directional vector
+                if abs((self.velocity.get_xy() + (dVector * self._yMove).get_xy()).length()) < velo2d:
+                    newVelocity.add_y(copysign(min(abs(self.velocity.get_y()), speedLimit), self._yMove)/2)#instantly reverse momentum
+                else:#If y isnt too much bigger than x
                     change = (( self._yMove * walkAccel ) * scalar)/2
-                    self.velocity.add_y(change)
+                    newVelocity.add_y(change)
                     del change
             elif self._isAirborne:#note we don't cap velocity while in air
-                self.velocity.add_y((self._yMove*airAccel*scalar)/2)
+                newVelocity.add_y((self._yMove*airAccel*scalar) /2)
                 
         #X velosity calculations
         if self._xMove:
             if not self._isAirborne and notExceedSpeedLimit:
-                if abs(self.velocity.get_x() + self._xMove) < abs(self.velocity.get_x()):
-                    self.velocity.add_x(copysign(min(abs(self.velocity.get_x()), speedLimit), self._xMove)/2)
+                dVector = self.np.get_parent().get_relative_vector(self.np, Vec3(1,0,0))#directional vector
+                if abs((self.velocity.get_xy() + (dVector * self._xMove).get_xy()).length()) < velo2d:
+                    newVelocity.add_x(copysign(min(abs(self.velocity.get_x()), speedLimit), self._xMove)/2)
                 else:
                     change = (( self._xMove * walkAccel ) * scalar)/2
-                    self.velocity.add_x(change)
+                    newVelocity.add_x(change)
                     del change
             elif self._isAirborne:#note we don't cap velocity while in air
-                self.velocity.add_x((self._xMove*airAccel*scalar)/2)
+                newVelocity.add_x((self._xMove*airAccel*scalar)/2)
+        
+        self.velocity += self.np.get_parent().get_relative_vector(self.np, newVelocity)
         
         #Velocity Cap
         if self.velocity.get_xy().length() > absoluteLimit:
-            self.velocity.set_y((self.velocity.get_xy().normalized() * absoluteLimit).get_y())
-            self.velocity.set_x((self.velocity.get_xy().normalized() * absoluteLimit).get_x())
+            self.velocity.set_y((normVector * absoluteLimit).get_y())
+            self.velocity.set_x((normVector * absoluteLimit).get_x())
         
-        
+
         ##Friction
-        #Y
+        newVelocity = Vec3(0,0,0)    
         if not self._isAirborne:#extra stuff for only on the ground
-            if abs(self.velocity.get_y()) > 0.2:#Add friction
-                self.velocity.add_y(-copysign(friction, self.velocity.get_y())*scalar / 2)
-            elif not self._yMove and self.velocity.get_y() != 0:
-                self.velocity.set_y(0)
-        #X
-        if not self._isAirborne:#extra stuff for only on the ground
-            if abs(self.velocity.get_x()) > 0.2:#Add friction
-                self.velocity.add_x(-copysign(friction, self.velocity.get_x())*scalar / 2)
-            elif not self._xMove and self.velocity.get_x() != 0:
+            dVector = self.np.get_relative_vector(self.np.get_parent(), self.velocity)
+            #Y
+            if abs(dVector.get_y()) > 0.2 and not (self._yMove and (abs(dVector.get_x()) > abs(dVector.get_y()) + 12)):#if we're moving y but x is bigger, we skip friction on y to catch-up
+                newVelocity.add_y(-copysign(friction, dVector.get_y())*scalar / 2)#^We disable friction to give axis a boost to catch up in velocity
+            #X
+            if abs(dVector.get_x()) > 0.2 and not (self._xMove and (abs(dVector.get_y()) > abs(dVector.get_x()) + 6)):
+                newVelocity.add_x(-copysign(friction, dVector.get_x())*scalar / 2)
+                
+            self.velocity += self.np.get_parent().get_relative_vector(self.np, newVelocity)
+            
+            if not self._xMove and not self._yMove and self.velocity.get_xy().length() < 1:
                 self.velocity.set_x(0)
+                self.velocity.set_y(0)
                 
             
 
-    def swim_half_update(self, scalar):##TODO:: see if this can be put back into main half update. this is kinda a stupid hack.
+    def swim_half_update(self, scalar):##TODO:: see if this can be put back into main half update. this is kinda a stupid hack.            
+        speedLimit = 100#maximum horizontal speed
+        swimAccel = 83.12#acceleration while walking per second
+        friction = 28.39#deceleration/acceleration resistance per second. If velocity in a direction is less than this, velocity is stopped in a short period of time
+        
         if self._wantJump:
-            self.velocity.add_z(((0.7*scalar)/2))
-        elif self.velocity.get_z() > -3:
+            if self.velocity.get_z() <= 40:
+                self.velocity.add_z(((50*scalar)/2))
+            else: self.velocity.set_z(40)
+        elif self.velocity.get_z() > -30:
             self.velocity.add_z(-((0.35*scalar)/2))
-            if self.velocity.get_z() <-3:
-                self.velocity.set_z(-3)
-            
-        speedLimit = 30#maximum horizontal speed
-        swimAccel = 2.5#acceleration while walking per second
-        friction = 1.6#deceleration/acceleration resistance per second. If velocity in a direction is less than this, velocity is stopped in a short period of time
+            if self.velocity.get_z() < -30:
+                self.velocity.set_z(-30)
         
         rigRelative = Vec3(0,0,0)
         ##Adjust values
         if not (self._yMove or self._xMove): friction *= 2
-        exceedControlSpeed = self.velocity.get_xy().length() <= speedLimit
+        notExceedControlSpeed = self.velocity.get_xy().length() <= speedLimit
         
         ##Y velosity calculations
         if self._yMove:
-            if exceedControlSpeed:
+            if notExceedControlSpeed:
                 rigRelative.add_y((self._yMove*swimAccel*scalar)/2)
                     
         #apply rigRelative to self.velocity
-        self.velocity += self.np.get_relative_vector(self._rig, rigRelative)
+        self.velocity += self.np.get_parent().get_relative_vector(self._rig, rigRelative)            
+                
+        ##X velosity calculations
+        if self._xMove:
+            if notExceedControlSpeed:
+                dVec = self.np.get_quat(self.np.get_parent()).get_right()
+                self.velocity += dVec * self._xMove*swimAccel*scalar /2
+                
+        ##Velocity-capping and friction
                     
-        if abs(self.velocity.get_y()) > speedLimit:
-            val = self.velocity.get_y()
-            self.velocity.set_y(copysign(speedLimit, val))#cap velocity at abs 20
-            del val
-            
-        if abs(self.velocity.get_y()) > 0.2:#Add friction
+        if self.velocity.get_xy().length() > speedLimit:
+            normVector = self.velocity.get_xy().normalized()
+            self.velocity.set_y((normVector * speedLimit).get_y())
+            self.velocity.set_x((normVector * speedLimit).get_x())
+        
+        #friction
+        if abs(self.velocity.get_y()) > 0.2:#Add friction Y
             self.velocity.add_y(-copysign(friction, self.velocity.get_y())*scalar / 2)
         elif not self._yMove and self.velocity.get_y():
             self.velocity.set_y(0)
             
-                
-        ##X velosity calculations
-        if self._xMove:
-            if exceedControlSpeed:
-                self.velocity.add_x((self._xMove*swimAccel*scalar)/2)
-                    
-        if abs(self.velocity.get_x()) > speedLimit:
-            val = self.velocity.get_x()
-            self.velocity.set_x(copysign(speedLimit, val))#cap velocity at abs 20
-            del val
-            
-        if abs(self.velocity.get_x()) > 0.2:#Add friction
+        if abs(self.velocity.get_x()) > 0.2:#Add friction X
             self.velocity.add_x(-copysign(friction, self.velocity.get_x())*scalar / 2)
         elif not self._xMove and self.velocity.get_x() != 0:
             self.velocity.set_x(0)
@@ -469,7 +478,9 @@ class playerEnt(npEnt):
     ########
     
     def add_ride(self, ride):
-        if ride != self.riding: self.np.wrt_reparent_to(ride.np)
+        if ride != self.riding:
+            self.velocity = ride.np.get_relative_vector(self.np.get_parent(), self.velocity)
+            self.np.wrt_reparent_to(ride.np)
         #self.np.set_pos(self.np.get_pos(ride.np))
         #self.np.reparent_to(ride.np)
 
@@ -481,8 +492,11 @@ class playerEnt(npEnt):
         self.timeOffRides = 0
         
         if self.velocity.length() > 0.3:
+            self.velocity -= ride.pseudoVelocity
+            '''
             rideTransformMat = self.np.get_mat(ride.np)
             self.velocity -= rideTransformMat.xformVec(ride.pseudoVelocity)
+            '''
         if base.isHost:
             base.server.add_message("addRide{" + self.name, (ride.name,))
 
@@ -494,8 +508,11 @@ class playerEnt(npEnt):
         self.np.wrt_reparent_to(base.game_instance.world)
         
         if self.riding == None: return
+        '''
         rideTransformMat = self.np.get_mat(self.riding.np)
         self.velocity += rideTransformMat.xformVec(self.riding.pseudoVelocity)
+        '''
+        self.velocity += self.np.get_relative_vector(self.riding.np, self.riding.pseudoVelocity)
         
         self.riding = None
         self.isRiding = False
@@ -540,38 +557,44 @@ class playerEnt(npEnt):
     ########
             
     def tangible_collide_into_event(self, entry):
-        vector = entry.get_surface_normal(entry.get_from_node_path())#WARNING!! Unapplied rotation transforms like to fuck with this!#TODO:: Figure out what I meant from this.
-        point = entry.get_surface_point(entry.get_from_node_path())
+        vector = entry.get_surface_normal(self.np.get_parent())#This is relative to our parent(usually world) because velocity is parent-relative
+        point = entry.get_surface_point(self.np)
         if vector.get_z() > 0.6:#(Above comment is copied from code from other project.)
             self._isAirborne = False
             self._collidingNps.append(entry.get_from_node_path())
-        elif (not vector.get_z() < 0) and point.z + 1 <= 0.03 and point.z > 0:
+        elif (not vector.get_z() < 0) and point.z + 1 <= 0.03 and point.z < 0:
             self.np.set_z(self.np, point.z+1)
         self.bend_velocity(vector)
         
     def tangible_collide_again_event(self, entry):
-        vector = entry.get_surface_normal(entry.get_from_node_path())
+        vector = entry.get_surface_normal(self.np.get_parent())
         if self._isAirborne:
             if vector.get_z() > 0.6:
                 self._isAirborne = False
         self.bend_velocity(vector)
                 
     def bend_velocity(self, vector):
-        if self.velocity.length() <= 0.0001:
+        if self.velocity.length() <= 0.01:
             return
         veloVec = self.velocity.normalized()
         angle = veloVec.angle_deg(vector)
-        if vector.get_z() > 0.93 and self.velocity.get_z() < 0:
+        if vector.get_z() > 0.83 and self.velocity.get_z() <= 3:
             self.velocity.set_z(0)
+            zSet = True
+        else: zSet = False
         if angle >= 1:
             norDot = vector.dot(self.velocity)
             mod = Vec3(vector)
             mod *= norDot
             self.velocity -= mod
+        if zSet:#Run this a second time to be safe
+            self.velocity.set_z(0)
     
     def tangible_collide_out_event(self, entry):
         np = entry.get_from_node_path()
-        if np in self._collidingNps: self._collidingNps.remove(np)
+        #vector = entry.get_surface_normal(np)
+        if np in self._collidingNps:
+            self._collidingNps.remove(np)
         if len(self._collidingNps) == 0: self._isAirborne = True
         
 
