@@ -187,6 +187,7 @@ class playerEnt(npEnt):
     ##########
         
     def spawn(self, sPoint: NodePath):
+        #print(sPoint.get_name())
         self.np.reparent_to(base.game_instance.world)
         self.np.set_pos(sPoint, 0,0,0)
         self.np.set_h(sPoint, 0)
@@ -230,7 +231,7 @@ class playerEnt(npEnt):
         self.np.set_h(self.np, self._hRot)#TODO:: This is insecure against aimhacking.
         #print(self.np.get_h())
         #Rotate velocity
-            
+
         #Calculate pitch
         if self._pRot != 0 and (abs(self._rig.get_p() + self._pRot) <= 85):
             self._rig.set_p(self._rig, self._pRot)
@@ -277,9 +278,9 @@ class playerEnt(npEnt):
         speedLimit = 55.5#maximum horizontal speed
         speedToLimit = speedLimit - velo2d
         absoluteLimit = 100
-        walkAccel = speedLimit if speedToLimit/speedLimit >= 0.98 else speedToLimit * 4
-        airAccel = 10#acceleration while in air per second
-        friction = 48.18#deceleration/acceleration resistance per second. If velocity in a direction is less than this, velocity is stopped in a short period of time
+        walkAccel = speedLimit if ((speedToLimit/speedLimit) <= 0.02) else speedLimit * 4
+        airAccel = 25#acceleration while in air per second
+        friction = 49.58#deceleration/acceleration resistance per second. If velocity in a direction is less than this, velocity is stopped in a short period of time
         
         ##Adjust values
         if (not (self._yMove or self._xMove)): friction *= 2
@@ -558,16 +559,18 @@ class playerEnt(npEnt):
             
     def tangible_collide_into_event(self, entry):
         vector = entry.get_surface_normal(self.np.get_parent())#This is relative to our parent(usually world) because velocity is parent-relative
+        vector = vector.normalized()
         point = entry.get_surface_point(self.np)
         if vector.get_z() > 0.6:#(Above comment is copied from code from other project.)
             self._isAirborne = False
             self._collidingNps.append(entry.get_from_node_path())
         elif (not vector.get_z() < 0) and point.z + 1 <= 0.03 and point.z < 0:
             self.np.set_z(self.np, point.z+1)
-        self.bend_velocity(vector)
+        if abs(point.get_z()) <= 2.15: self.bend_velocity(vector)#only bend velocity if the point is within reach of the top or bottom
         
     def tangible_collide_again_event(self, entry):
         vector = entry.get_surface_normal(self.np.get_parent())
+        vector = vector.normalized()
         if self._isAirborne:
             if vector.get_z() > 0.6:
                 self._isAirborne = False
