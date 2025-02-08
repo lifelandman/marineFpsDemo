@@ -3,7 +3,7 @@ from direct.task import Task
 
 from panda3d.core import NodePath
 
-from .entities.playerEnts import clientPlayer, hostNetPlayer, clientNetPlayer
+from .entities.playerVers import clientPlayer, hostNetPlayer, clientNetPlayer
 
 class playerManager(DirectObject):
     
