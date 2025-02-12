@@ -1,7 +1,6 @@
 from panda3d.core import QueuedConnectionManager, QueuedConnectionListener, QueuedConnectionReader, ConnectionWriter
 from panda3d.core import PointerToConnection, NetAddress, NetDatagram
-from direct.distributed.PyDatagramIterator import PyDatagramIterator
-from direct.distributed.PyDatagram import PyDatagram
+from panda3d.core import NetDatagram, DatagramIterator
 from direct.task import Task
 from direct.showbase.DirectObject import DirectObject
 from .commonMsg import msgFilterStandard, msgFilterValue, grabberTable, setterTable
@@ -65,11 +64,11 @@ class clientServer(DirectObject):
         return task.cont
 
     def proc_data(self):
-        datagram = PyDatagram()
+        datagram = NetDatagram()
             
         if self.cReader.getData(datagram):
             #try:
-            iterator = PyDatagramIterator(datagram)
+            iterator = DatagramIterator(datagram)
             #Begin processing commands
             commands = iterator.getString().split(";")
             for com in commands:
@@ -118,7 +117,7 @@ class clientServer(DirectObject):
 
     def send_messages(self, task):
         if len(self.outBox) > 0:
-            newDatagram = PyDatagram()
+            newDatagram = NetDatagram()
 
             msgString = ""
             for message in self.outBox:

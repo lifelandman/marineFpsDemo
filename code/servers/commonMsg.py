@@ -89,6 +89,9 @@ def gPlay (iterator):
             iterator.get_bool(),#is_airborne
             iterator.get_bool(),#_isCrouching
             )
+def gID (iterator):#This is untested!! please check!!
+    data = iterator.get_datagram()
+    return base.server.connections.index(data.get_connection())
 
 grabberTable = {
     "float64":gFloat64,
@@ -96,7 +99,8 @@ grabberTable = {
     "string":gString,
     "u8int":gu8int,
     "u32int":gu32int,
-    "play":gPlay
+    "play":gPlay,
+    "connectionId":gID
     }
 
 ####################Ditto of above, except for sending.
@@ -127,6 +131,8 @@ def sPlay (datagram, val):
     datagram.add_float64(val[13]),#z
     datagram.add_bool(val[14])#is_airborne
     datagram.add_bool(val[15])#_isCrouching
+def do_not_set (datagram, val):
+    return True
     
 
 setterTable = {
@@ -135,5 +141,6 @@ setterTable = {
     "string":sString,
     "u8int":su8int,
     "u32int":su32int,
-    "play":sPlay
+    "play":sPlay,
+    "connectionId":do_not_set
     }

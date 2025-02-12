@@ -1,3 +1,4 @@
+**These were concept notes and may not represent the final solution**
 Client connects to server.
 server sends "introduce" with connection id
 Client sends "connect" with connection id and name

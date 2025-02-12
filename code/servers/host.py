@@ -1,7 +1,6 @@
 from panda3d.core import QueuedConnectionManager, QueuedConnectionListener, QueuedConnectionReader, ConnectionWriter
 from panda3d.core import PointerToConnection, NetAddress, NetDatagram
-from direct.distributed.PyDatagramIterator import PyDatagramIterator
-from direct.distributed.PyDatagram import PyDatagram
+from panda3d.core import NetDatagram, DatagramIterator
 from direct.task import Task
 from .commonMsg import msgFilterStandard, msgFilterValue, grabberTable, setterTable
 
@@ -99,11 +98,11 @@ class hostServer():
         return task.cont
 
     def proc_data(self):
-        datagram = PyDatagram()
+        datagram = NetDatagram()
             
         if self.cReader.getData(datagram):
             #try:
-            iterator = PyDatagramIterator(datagram)
+            iterator = DatagramIterator(datagram)
             #Begin processing commands
             commands = iterator.getString().split(";")
             for com in commands:
@@ -150,7 +149,7 @@ class hostServer():
 
     def send_messages(self, task):
         if len(self.outBox) > 0:
-            newDatagram = PyDatagram()
+            newDatagram = NetDatagram()
 
             msgString = ""
             for message in self.outBox:
@@ -183,7 +182,7 @@ class hostServer():
         Send a message to a single player. properties:
         message:string, vals:tuple, index:string
         '''
-        newDatagram = PyDatagram()
+        newDatagram = NetDatagram()
         
         if vals:
             comInfo = msgFilterValue(message)
@@ -204,6 +203,8 @@ class hostServer():
         else: return False
             
         if int(index) not in self.availableSlots:
+            '''newDatagram.set_connection(self.connections[int(index)])#These are probably unnessisary.
+            newDatagram.set_address(self.addresses[int(index)])'''#I'm hoping that these values are set by the end connection reader, but I'm making this code ret2go just in case.
             if not self.cWriter.send(newDatagram, self.connections[int(index)]):
                 pass    
                 #print('send failed')
