@@ -1,8 +1,10 @@
 from direct.showbase.DirectObject import DirectObject
 from direct.task import Task
 
+from enum import Enum
+
 class entBase(DirectObject):
-    
+    #......................................................................................................................................
     tasks = (#(task name string, string attribute name of task function, optional: sort)
         )
     
@@ -11,8 +13,9 @@ class entBase(DirectObject):
     
     events = (#(event name string, string attribute name of event function)
         )
+    #``````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
     
-    def __init__(self, name: str = '', **kwargs):#we accept kwargs even though we don't use them to catch anything that might fall through
+    def __init__(self, name: str = '', netControllableBy: tuple = (), **kwargs):#we accept kwargs even though we don't use them to catch anything that might fall through
         
         self.name = name
         
@@ -20,6 +23,9 @@ class entBase(DirectObject):
             print("warning! kwargs len recieved by entBase is ==", str(len(kwargs)))
             
         self.acceptOnce("gameStart", self.start_interactivity)#Wait until the game starts so all players can have better synchronization
+
+        self.accept("server: building msg lists", self.announce_net_commands)
+        self.announce_net_commands(netControllableBy)
         
 
     def start_interactivity(self):
@@ -42,6 +48,25 @@ class entBase(DirectObject):
         for eventGroup in self.events:
             evntName = eventGroup[0].format(name = name)
             self.accept(evntName, getattr(self, eventGroup[1]))
+
+    net_commands = (#(command name, optional, but need both:: type, number of times to gather information)
+        )
+    host_net_commands = (#just command name
+        )
+    def announce_net_commands(self, controllableBy: tuple):#Tells commonMsg what sorts of commands we'll use, and ensures incorrect connections can't control us.
+        if base.isHost:
+            for control in controllableBy:
+                base.server.grant_access(self.name, control)
+
+        for command in self.net_commands:
+            if len(command) ==1:
+                base.server.add_msg(command[0])
+            else:
+                base.server.add_msg_value(command[0], command[1], command[2])
+
+        if base.isHost:
+            for command in self.host_net_commands:
+                base.server.add_host_filter(command)
             
     def destroy(self):
         self.ignoreAll()

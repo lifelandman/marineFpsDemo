@@ -1,6 +1,5 @@
 from direct.showbase.ShowBase import ShowBase
 from panda3d.core import load_prc_file, TextNode
-from code.main_menu import menu_ui
 
 
 class game(ShowBase):
@@ -10,6 +9,7 @@ class game(ShowBase):
 
     def __init__(self, indirectStart = True):
         ShowBase.__init__(self)
+        from code.main_menu import menu_ui
         load_prc_file("gameConfig.prc")
         self.optionPage = load_prc_file("options.prc")#Need a handle on this ConfigPage for saving modifications to it
         base.disableMouse()

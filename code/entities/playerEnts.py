@@ -39,6 +39,16 @@ class playerEnt(npEnt):
     events = (("{name}-into-ground", "tangible_collide_into_event"),("{name}-out-ground", "tangible_collide_out_event"),("{name}-again-ground", "tangible_collide_again_event"),
               ("{name}-into-water", "water_collide_into_event"),("{name}-out-water", "water_collide_out_event"),("{name}-again-water", "water_collide_again_event"),
               )
+
+    net_commands = (("reload"), ("removeRide"),
+                    ("playData", "play", 1),
+                    ("fire", "u8int", 1),
+                    ("changeWpn", "u8int", 2),
+                    ("playerHealthChange", "float64", 1),
+                    ("addRide", "string", 1),
+        )
+    host_net_commands = ("playerHealthChange"
+        )
     
     ##################
     #Creation Methods#

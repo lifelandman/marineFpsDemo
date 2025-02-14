@@ -2,6 +2,8 @@ from direct.showbase.DirectObject import DirectObject
 
 class netPlayerTracker(DirectObject):
     def __init__ (self):
+        base.server.add_msg("sortedTeams")
+
         self.names = []#Coorispond a player name with connection id
         
         self.teams = {"deathMatch":[],"red":[],"blue":[],"PvE":[]}#Null, Red, Blue

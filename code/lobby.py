@@ -14,6 +14,9 @@ from .game import game_world
 class lobby_ui(DirectObject):
     def __init__(self, pmen, isHost, ipAdress = None):
         super().__init__()
+
+        self.server = hostServer() if isHost else clientServer(ipAdress)
+        base.server = self.server
         
         self.gameStart = False
         self.in_menu = True
@@ -41,8 +44,6 @@ class lobby_ui(DirectObject):
         self.accept('disconnect', self.remove_player)
         
         if self.isHost:
-            self.server = hostServer()
-            base.server = self.server
             self.name = ConfigVariableString('my-name', "player").get_string_value()
             self.memVal = "host"
             self.join_player(self.name, "host")
@@ -58,11 +59,15 @@ class lobby_ui(DirectObject):
             self.accept("sortedTeams", self.make_player_list)
 
             self.accept('playMap', self.play_map)
-            self.server = clientServer(ipAdress)
-            base.server = self.server
+
             if not self.server.success:
                 print('deleting')
                 self.delete()
+
+        self.server.add_msg_value("hostList", "string", 8),#Alternates between player name and id
+        self.server.add_msg_value("introduce", "string", 1)
+        self.server.add_msg_value("playMap", "string", 1)
+        self.server.add_msg_value("alias", "string", 2)
         
     
     def connect_player(self, name, pid, version):

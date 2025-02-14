@@ -151,6 +151,7 @@ class funcDisableWeapons(npEnt):
               ("player-out-{name}", "enable")
               )
     
+    net_commands = (("playerWpn access change", "bool", 1),)
     
     def disable(self, entry):
         player = entry.get_from_node_path().get_net_python_tag("entOwner")
@@ -205,7 +206,10 @@ class funcRideable(npEnt):
 
 from math import pi, cos, sin, radians, atan2
 from panda3d.core import Vec2
-class funcRotateAroundTarget(funcRideable):
+class funcRotateAroundTarget(funcRideable):#funcRevolve is a better name for this
+
+    net_commands = (("funcRAT set dist", "float64", 1),
+    ) + funcRideable.net_commands
     
     def __init__(self, target:NodePath, speed:float = 2.0, **kwargs):
         super().__init__(**kwargs)

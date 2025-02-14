@@ -2,11 +2,12 @@ from panda3d.core import QueuedConnectionManager, QueuedConnectionListener, Queu
 from panda3d.core import PointerToConnection, NetAddress, NetDatagram
 from panda3d.core import NetDatagram, DatagramIterator
 from direct.task import Task
-from .commonMsg import msgFilterStandard, msgFilterValue, grabberTable, setterTable
+from .commonMsg import msgFilterStandard, msgFilterValue, grabberTable, setterTable, add_my_msg, add_value_msg, initialize_msg_lists
 
 
 class hostServer():
     def __init__(self):
+        initialize_msg_lists()
         #Define class variables needed elsewhere
         self.availableSlots = []#List of indecies of disconnected players. instead of immediately deleting dissconected players and shifting references, keep the slots full until a new player connects.
         self.connections = []
@@ -16,6 +17,10 @@ class hostServer():
         #Outgoing message-related variables
         self.outBox = []#List of all events that need to be sent to the clients
         self.valBox = []#List of message values where nessicary
+        #dictionary of connection ids, and the "names" they're allowed to control
+        self.nameControlDict = {}
+        #host filter
+        self.hostFilter = []
         
         
         #create connection host
@@ -52,8 +57,8 @@ class hostServer():
                     self.cReader.remove_connection(self.connections[index])
                     messenger.send("disconnect", [str(index),])
                     return Task.cont
-                except:
-                    print("server Error: unknown disconnect")
+                except Exception as error:
+                    print("server Error: ", error)
                     #messenger.send("serverError")
                     self.shut_down()
                     return Task.done
@@ -106,12 +111,19 @@ class hostServer():
             #Begin processing commands
             commands = iterator.getString().split(";")
             for com in commands:
+                splitCom = com.split("{")
+                comBase = splitCom[0]
+                comName = splitCom[1] if len(splitCom) > 1 else ""
+                del splitCom
+                if comBase in self.hostFilter or ( comName != "" and (not comName in self.nameControlDict[ self.connections.index(datagram.get_connection()) ]) ):
+                    continue
+
                 if com == "":
                     continue
-                if msgFilterStandard(com):
+                if msgFilterStandard(comBase):
                     messenger.send(com)
                             
-                comInfo = msgFilterValue(com)#Either False or a tuple containing the type of data for this message and how much of it we need
+                comInfo = msgFilterValue(comBase)#Either False or a tuple containing the type of data for this message and how much of it we need
                 if comInfo:
                     count = 0
                     target = comInfo[1]
@@ -233,9 +245,33 @@ class hostServer():
         self.cManager.close_connection(self.tcpSocket)
         
     def shut_down (self):
-        #self.send_messages(None)
+        self.send_messages(None)
         self.disconnect_all()
+        self.clear_access()
+        self.hostFilter = []
         taskMgr.remove("listenerPoll")
         taskMgr.remove("readerPoll")
         taskMgr.remove("disconnectPoll")
         taskMgr.remove("sendPoll")
+
+
+    def add_host_filter(self, message: str):
+        if message in self.hostFilter:
+            return
+        self.hostFilter.append(message)#Need to clear this on scene transition
+
+    def grant_access(self, name: str, controllableBy: int):
+        '''Grants a connection access to a "name". controllableBy should be the connection id and not the player name.'''
+        if controllableBy not in self.nameControlDict.keys():
+            self.nameControlDict[controllableBy] = []
+        self.nameControlDict[controllableBy].append(name)
+
+    def clear_access(self):
+        '''restarts the name control list. This should be done during level transitions. TODO:: implement server cleanup for level transitions.'''
+        self.nameControlDict = {}#we might need to add more features or repurpose later on. anyway, yes this is a waste rn
+    
+    def add_msg(self, name):
+        add_my_msg(name)
+
+    def add_msg_value(self, name: str, valueType: str, numTimes: int):
+        add_value_msg(name, valueType, numTimes)

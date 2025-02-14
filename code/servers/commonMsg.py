@@ -1,36 +1,42 @@
 
 myMsg = [
-    "exit_session",
-    "disconnecting",
-    "name request",
-    "kick",#BE CAREFULL!!
-    "gameStart",
-    "expectOveride",#Hey, we've detected a potential teleport, when we report your position next, go there or else.
-    "reload",#First numberable myMsg
-    "sortedTeams",
-    "removeRide",
     ]
 
 valueMsg = {
-    "name":("string", 1),#player name
-    "hostList":("string", 8),#Alternate player name and id
-    "introduce":("string", 1),#yourself. TODO:: add int message support
-    "connect":("string",3),#first value is name, second value is index of player. Indicies are not numbers if local to server.
-    "alias":("string", 2),#ofical name and id.
-    "disconnect":("string", 1),
-    "playMap":("string", 1),
-    "ready":("u8int", 1),
-    "rng":("u32int", 1),
-    "playData":("play", 1),
-    "fire":("u8int", 1),
-    "changeWpn":("u8int", 2),
-    "playerHealthChange":("float64", 1),
-    "kill":("string", 1),
-    "changeTeam":("string",2),
-    "addRide":("string",1),
-    "funcRAT set dist":("float64", 1),
-    "playerWpn access change":("bool", 1),
     }
+
+def initialize_msg_lists():#messages left in here after the rework are probably important enough they can stay.
+    global myMsg
+    global valueMsg
+
+    myMsg = [
+    "exit_session",
+    #"disconnecting",#This one's not actually used anyomore.
+    #"name request",#ditto.
+    "kick",#BE CAREFULL!!
+    "gameStart",#Used in a hack in entBase.
+    "expectOveride",#Hey, we've detected a potential teleport, when we report your position next, go there or else. kept because this could be multi-entity and playerMgr (primary sender) is not a entity
+    ]
+
+    valueMsg = {
+        #"name":("string", 1),#player name
+        "connect":("string",3),#first value is name, second value is index of player. Indicies are not numbers if local to server. Used in multiple places
+        "disconnect":("string", 1),#used in multiple places
+        "ready":("u8int", 1),
+        "changeTeam":("string",2),#This indicates that teams have been updated, not that an individual has changed.
+        }
+    messenger.send("server: building msg lists")
+initialize_msg_lists()
+
+def add_my_msg(name: str):
+    if name in myMsg:
+        return
+    myMsg.append(name)
+
+def add_value_msg(name:str, valueType: str, numTimes: int):
+    if name in valueMsg.keys():
+        return
+    valueMsg[name] = (valueType, numTimes)
 
     
 def msgFilterStandard(message):
@@ -90,6 +96,7 @@ def gPlay (iterator):
             iterator.get_bool(),#_isCrouching
             )
 def gID (iterator):#This is untested!! please check!!
+    #TODO:: give different logic if is host.
     data = iterator.get_datagram()
     return base.server.connections.index(data.get_connection())
 

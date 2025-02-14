@@ -35,6 +35,9 @@ def make_client_player_class(base_class = playerEnt):
     
         over = False#cheap hack to save a logic check in playerMgr
 
+
+        
+
         def __init__(self, camera, **kwargs):
             super().__init__(**kwargs)
             self.camera = camera#See spawn and de_spawn below.
@@ -226,6 +229,12 @@ clientPlayer = make_client_player_class()
 
 def make_host_net_player_class(base_class = playerEnt):
     class newHostNetPlayer(base_class):#(player._yMove, _xMove, _wantJump, _wantCrouch, _hRot, _pRot, vX,vY,vZ,h,p,x,y,z,is_airborne)
+
+        net_commands = (("kill", "string", 1),
+            ) + base_class.net_commands
+
+        host_net_commands = ("kill")
+
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
             self.addTask(self.checkMove, self.name + 'check movement', sort = 10)

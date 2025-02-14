@@ -14,6 +14,7 @@ class randomGen(DirectObject):
         base.gameSharedRandom = 0
         self.add_task(self.randomize, 'randomizer', sort =2)
         self.accept("rng", self.accept_update)
+        base.server.add_msg_value("rng", "u32int", 1)
         
     def randomize(self, taskobj):
         if not base.isHost and self.updated:

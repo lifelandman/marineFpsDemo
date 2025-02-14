@@ -3,10 +3,11 @@ from panda3d.core import PointerToConnection, NetAddress, NetDatagram
 from panda3d.core import NetDatagram, DatagramIterator
 from direct.task import Task
 from direct.showbase.DirectObject import DirectObject
-from .commonMsg import msgFilterStandard, msgFilterValue, grabberTable, setterTable
+from .commonMsg import msgFilterStandard, msgFilterValue, grabberTable, setterTable, add_my_msg, add_value_msg, initialize_msg_lists
 
 class clientServer(DirectObject):
     def __init__(self, ip):
+        initialize_msg_lists()
         #Define class variables needed elsewhere
         self.address= ip
         rendezvous = 20560
@@ -72,13 +73,17 @@ class clientServer(DirectObject):
             #Begin processing commands
             commands = iterator.getString().split(";")
             for com in commands:
+                splitCom = com.split("{")
+                comBase = splitCom[0]
+                del splitCom
+
                 if com == "":
                     continue
-                if msgFilterStandard(com):
+                if msgFilterStandard(comBase):
                     messenger.send(com)
                     continue
                             
-                comInfo = msgFilterValue(com)#Either False or a tuple containing the type of data for this message and how much of it we need
+                comInfo = msgFilterValue(comBase)#Either False or a tuple containing the type of data for this message and how much of it we need
                 if comInfo:
                     count = 0
                     target = comInfo[1]
@@ -159,3 +164,15 @@ class clientServer(DirectObject):
         taskMgr.remove("disconnectPoll")
         taskMgr.remove("sendPoll")
         self.ignoreAll()
+
+    def grant_access(self, name: str, controllableBy: int):
+        pass
+
+    def clear_access(self):
+        pass
+    
+    def add_msg(self, name):
+        add_my_msg(name)
+
+    def add_msg_value(self, name: str, valueType: str, numTimes: int):
+        add_value_msg(name, valueType, numTimes)
