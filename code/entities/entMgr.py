@@ -46,7 +46,7 @@ class entityManager():
                     entity = entCheck[1](name = np.get_name() + "_" +entCheck[0], np = np, **params)
                     self.entities.append(entity)
                 except Exception as error:
-                    notify.warning("failed entity initialization:", error)
+                    notify.warning("failed entity initialization: " + str(error))
         #render.ls()
                 
     def get_entity(self, entName):

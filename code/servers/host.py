@@ -270,8 +270,8 @@ class hostServer():
         '''restarts the name control list. This should be done during level transitions. TODO:: implement server cleanup for level transitions.'''
         self.nameControlDict = {}#we might need to add more features or repurpose later on. anyway, yes this is a waste rn
     
-    def add_msg(self, name):
+    def add_command(self, name):
         add_my_msg(name)
 
-    def add_msg_value(self, name: str, valueType: str, numTimes: int):
+    def add_command_value(self, name: str, valueType: str, numTimes: int):
         add_value_msg(name, valueType, numTimes)

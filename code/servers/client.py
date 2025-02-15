@@ -171,8 +171,8 @@ class clientServer(DirectObject):
     def clear_access(self):
         pass
     
-    def add_msg(self, name):
+    def add_command(self, name):
         add_my_msg(name)
 
-    def add_msg_value(self, name: str, valueType: str, numTimes: int):
+    def add_command_value(self, name: str, valueType: str, numTimes: int):
         add_value_msg(name, valueType, numTimes)

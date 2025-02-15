@@ -410,7 +410,7 @@ class playerEnt(npEnt):
     def ladder_half_update(self, scalar):
         
         #While player is on ladder we need to quickly slow velocity, so this is first
-        ladderAccel = 1
+        ladderAccel = 1.5 if self.velocity.length() < 2 else 16
         ladderMax = 7
         
         if self.velocity.length():
@@ -425,18 +425,16 @@ class playerEnt(npEnt):
         npH = self.np.get_h(base.game_instance.world)#Need to correct this for sides
         
         ladderSide = self.ladder.get_x(self.np) > 0#True if to the right of our nodepath
-        amntNotFacing = abs(180 - abs(self.ladderH - npH))#The number of degrees by which the nodepath is not facing the ladder
-        #print(amntNotFacing)
-        
-        if amntNotFacing < 45 or amntNotFacing > 135:#ladder in front/behind
+        amntFacing = abs(180 - abs(self.ladderH - npH))#The number of degrees by which the nodepath is not facing the ladder
+
+        if not (45 < amntFacing < 130):#ladder in front/behind
             if self._rig.get_p() >= 0:
                 climbMove = self._yMove
-                slideMove = self._xMove
-            elif amntNotFacing > 135:#Ladder Behind and looking down
+            else:#looking down
                 climbMove = -self._yMove
-                slideMove = - -self._xMove
-            else:#looking front down
-                climbMove = -self._yMove
+            if 45 >= amntFacing:#looking away
+                slideMove = -self._xMove
+            else:
                 slideMove = self._xMove
         elif ladderSide:#Ladder to right
             climbMove = self._xMove
@@ -466,13 +464,18 @@ class playerEnt(npEnt):
                 self.np.set_y(self.ladder, self.np.get_y(self.ladder) + (slideMove * ladderMax * scalar/2))
             
 
-        if self._wantJump:
-            if amntNotFacing > 90:
-                self.velocity.add_y(0.5/2)#Forgot that velocity is player relative
-                self.velocity.add_z(2/2)
+        if self._wantJump:#TODO::make this relative to viewangle properly
+            newVelocity = Vec3(0,0,0)
+            vViewAngle = self._rig.get_p()
+            horiDist = ((85 - abs(vViewAngle))/85)*20 + 7
+
+            if amntFacing > 90:
+                newVelocity.add_y(horiDist)#Forgot that velocity is player relative
             else:#Jump in direction we're looking
-                self.velocity.add_y(-0.5/2)
-                self.velocity.add_z(2/2)
+                newVelocity.add_y(horiDist)
+            self.velocity.add_z(max(vViewAngle/8.5, 4))
+
+            self.velocity += self.np.get_parent().get_relative_vector(self.np, newVelocity)
             self.exit_ladder()
             
     def exit_ladder(self):#Defined here so we can access it ourselves if need be

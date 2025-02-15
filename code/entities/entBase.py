@@ -13,6 +13,9 @@ class entBase(DirectObject):
     
     events = (#(event name string, string attribute name of event function)
         )
+
+    excludedInheritedBehavior = (#String of any events/tasks you want to be excluded from behavior in a base class.
+        )
     #``````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````````
     
     def __init__(self, name: str = '', netControllableBy: tuple = (), **kwargs):#we accept kwargs even though we don't use them to catch anything that might fall through
@@ -30,24 +33,37 @@ class entBase(DirectObject):
 
     def start_interactivity(self):
         name = self.name
+
+        #build exclusion list
+        exclusions = []
+        for ent in self.__class__.__mro__:
+            if not issubclass(ent, entBase): continue#Stupid hack
+            exclusions += ent.excludedInheritedBehavior
+
         #add tasks
-        for taskGroup in self.tasks:
-            tskName = taskGroup[0].format(name = name)
-            if len(taskGroup) <3:
-                self.addTask(getattr(self, taskGroup[1]), tskName)
-            else:
-                self.addTask(getattr(self, taskGroup[1]), tskName, sort = taskGroup[2])
-        #add delayed tasks
-        for taskGroup in self.delayTasks:
-            tskName = taskGroup[0].format(name = name)
-            if len(taskGroup) <4:
-                self.doMethodLater(taskGroup[2], getattr(self, taskGroup[1]), tskName)
-            else:
-                self.doMethodLater(taskGroup[2], getattr(self, taskGroup[1]), tskName, sort = taskGroup[3])
-        #accept events
-        for eventGroup in self.events:
-            evntName = eventGroup[0].format(name = name)
-            self.accept(evntName, getattr(self, eventGroup[1]))
+        for ent in self.__class__.__mro__:#This should contain ourselves and all parents, so we automatically get access to parent tasks/events
+            if not issubclass(ent, entBase): continue#Stupid hack
+
+            for taskGroup in ent.tasks:
+                tskName = taskGroup[0].format(name = name)
+                if tskName in exclusions: continue#Skip if we specifically don't want this parent behavior
+                if len(taskGroup) <3:
+                    self.addTask(getattr(self, taskGroup[1]), tskName)
+                else:
+                    self.addTask(getattr(self, taskGroup[1]), tskName, sort = taskGroup[2])
+            #add delayed tasks
+            for taskGroup in ent.delayTasks:
+                tskName = taskGroup[0].format(name = name)
+                if tskName in exclusions: continue
+                if len(taskGroup) <4:
+                    self.doMethodLater(taskGroup[2], getattr(self, taskGroup[1]), tskName)
+                else:
+                    self.doMethodLater(taskGroup[2], getattr(self, taskGroup[1]), tskName, sort = taskGroup[3])
+            #accept events
+            for eventGroup in ent.events:
+                evntName = eventGroup[0].format(name = name)
+                if evntName in exclusions: continue
+                self.accept(evntName, getattr(self, eventGroup[1]))
 
     net_commands = (#(command name, optional, but need both:: type, number of times to gather information)
         )
@@ -58,15 +74,18 @@ class entBase(DirectObject):
             for control in controllableBy:
                 base.server.grant_access(self.name, control)
 
-        for command in self.net_commands:
-            if len(command) ==1:
-                base.server.add_msg(command[0])
-            else:
-                base.server.add_msg_value(command[0], command[1], command[2])
+        for ent in self.__class__.__mro__:
+            if not issubclass(ent, entBase): continue#Stupid hack
 
-        if base.isHost:
-            for command in self.host_net_commands:
-                base.server.add_host_filter(command)
+            for command in ent.net_commands:
+                if len(command) ==1:
+                    base.server.add_command(command[0])
+                else:
+                    base.server.add_command_value(command[0], command[1], command[2])
+
+            if base.isHost:
+                for command in ent.host_net_commands:
+                    base.server.add_host_filter(command)
             
     def destroy(self):
         self.ignoreAll()

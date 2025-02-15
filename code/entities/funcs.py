@@ -40,8 +40,8 @@ class funcLadder(npEnt):
         
         dimensions = cbox.get_dimensions()
         self._zDist = dimensions.get_z()/2#z distance from center
-        self._xSideDist = dimensions.get_x()/2 + 0.6#add zero point 6 to represent player hanging on with left/right side
-        self._ySideDist = dimensions.get_y()/2 + 0.6
+        self._xSideDist = dimensions.get_x()/2 + 0.7#add zero point 6 to represent player hanging on with left/right side
+        self._ySideDist = dimensions.get_y()/2 + 0.7
         
         self._climbingPlayers = []
         #print(self.name)
@@ -92,7 +92,8 @@ class funcLadder(npEnt):
     def check_players(self, taskobj):
         for playerGroup in self._climbingPlayers:
             player = playerGroup[0]
-            if player.np.get_z(self.np) - 1 > self._zDist:#not abs because player_ground takes care of getting off at bottom and was preventing getting on by walking
+            if player.np.get_z(self.np) - 1.4 > self._zDist:#not abs because player_ground takes care of getting off at bottom and was preventing getting on by walking
+                player.velocity.add_z(2)
                 player.exit_ladder()
             else:
                 if playerGroup[1]:
@@ -106,7 +107,7 @@ class funcLadder(npEnt):
             if pGroup[0] is player: self._climbingPlayers.remove(pGroup)
             
 
-    def player_ground(self, entry):
+    def player_ground(self, entry):#TODO:: ladders are effectively bottomless.
         player = entry.get_from_node_path().get_net_python_tag("entOwner")
         vector = entry.get_surface_normal(entry.get_from_node_path())
         if vector.get_z() > 0.6 and player.onLadder and player.ladder == self.np:
@@ -209,7 +210,7 @@ from panda3d.core import Vec2
 class funcRotateAroundTarget(funcRideable):#funcRevolve is a better name for this
 
     net_commands = (("funcRAT set dist", "float64", 1),
-    ) + funcRideable.net_commands
+    )
     
     def __init__(self, target:NodePath, speed:float = 2.0, **kwargs):
         super().__init__(**kwargs)

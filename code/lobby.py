@@ -64,10 +64,10 @@ class lobby_ui(DirectObject):
                 print('deleting')
                 self.delete()
 
-        self.server.add_msg_value("hostList", "string", 8),#Alternates between player name and id
-        self.server.add_msg_value("introduce", "string", 1)
-        self.server.add_msg_value("playMap", "string", 1)
-        self.server.add_msg_value("alias", "string", 2)
+        self.server.add_command_value("hostList", "string", 8),#Alternates between player name and id
+        self.server.add_command_value("introduce", "string", 1)
+        self.server.add_command_value("playMap", "string", 1)
+        self.server.add_command_value("alias", "string", 2)
         
     
     def connect_player(self, name, pid, version):
