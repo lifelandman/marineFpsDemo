@@ -1,4 +1,5 @@
 from .funcs import *
+#from .sample.sampleTrampoline import sampleTrampoline
 
 from direct.directnotify.DirectNotify import DirectNotify
 
