@@ -167,6 +167,7 @@ class hostServer():
             for message in self.outBox:
                 msgString += message
                 msgString += ";"
+            if len(msgString) <= 0: return
             newDatagram.add_string(msgString)
             
             for message in self.outBox:#Similar to above, but we have to send the command string before all values, so this is it's own loop.
