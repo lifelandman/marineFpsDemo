@@ -98,6 +98,7 @@ class game_world(DirectObject):#I'll make this a direct object just incase I nee
         self.readyTester.append(num)
         if self.lobby.tracker.ready_test(self.readyTester):
             self.ignore('ready')
+            self.ignore('disconnect')
             del self.readyTester
             self.game_start()
     
